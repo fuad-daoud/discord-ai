@@ -1,4 +1,4 @@
-package main
+package test
 
 //
 //import (
@@ -21,7 +21,7 @@ package main
 //
 //	log.SetFlags(log.Ldate | log.Lmicroseconds)
 //}
-//func main() {
+//func test() {
 //
 //	//log.Println("Starting application bot with token", Token)
 //	//session, err := discordgo.New("Bot " + Token)
