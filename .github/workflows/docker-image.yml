@@ -34,7 +34,7 @@ jobs:
         with:
           key: go-cache
           path: |
-            ${{ HOME }}/go
+            ~/go
             ${{ GITHUB_WORKSPACE }}
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag discord-ai:${{ GITHUB_SHA }}
