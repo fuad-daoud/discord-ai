@@ -21,7 +21,7 @@ jobs:
       - name: Cache files
         uses: actions/cache/save@v4
         with:
-          key: go-cache
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('$GITHUB_WORKSPACE/discord-ai') }}
           path: |
             ${{ env.HOME }}/go
             ${{ env.GITHUB_WORKSPACE }}
@@ -34,28 +34,10 @@ jobs:
         uses: actions/cache/restore@v4
         id: cache
         with:
-          key: go-cache
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('$GITHUB_WORKSPACE/discord-ai') }}
           path: |
             ${{ env.HOME }}/go
             ${{ env.GITHUB_WORKSPACE }}
-
-      - name: cancel if not cached
-        uses: actions/github-script@v6
-        if: steps.cache.outputs.cache-hit != 'true'
-        with:
-          script: |
-              const delay = ms => new Promise(res => setTimeout(res, ms));
-
-              github.rest.actions.cancelWorkflowRun({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: context.runId
-              });
-
-              while (true) {
-                core.info('Waiting for workflow to cancel ...');
-                await delay(5000);
-              }
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
 #  publish:
