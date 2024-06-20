@@ -22,8 +22,8 @@ jobs:
         with:
           key: go-cache
           path: |
-            ~/go
-            ${{ GITHUB_WORKSPACE }}
+            ${{ env.HOME }}/go
+            ${{ env.GITHUB_WORKSPACE }}
 
   docker-build:
     runs-on: ubuntu-latest
@@ -34,10 +34,10 @@ jobs:
         with:
           key: go-cache
           path: |
-            ~/go
-            ${{ GITHUB_WORKSPACE }}
+            ${{ env.HOME }}/go
+            ${{ env.GITHUB_WORKSPACE }}
       - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag discord-ai:${{ GITHUB_SHA }}
+        run: docker build . --file Dockerfile --tag discord-ai:${{ env.GITHUB_SHA }}
 #  publish:
 #
 #    runs-on:
