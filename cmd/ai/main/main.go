@@ -88,7 +88,8 @@ func main() {
 	//guildId := snowflake.MustParse(`847908927554322432`)
 	//conn := client.VoiceManager().GetConn(guildId)
 	//defer conn.Close(context.TODO())
-	err = http.ListenAndServe("localhost:8080", nil)
+
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic(err)
 	}
