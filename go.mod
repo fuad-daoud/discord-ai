@@ -1,6 +1,6 @@
 module github.com/fuad-daoud/discord-ai
 
-go 1.21
+go 1.22
 
 require (
 	github.com/deepgram/deepgram-go-sdk v1.3.5
