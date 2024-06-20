@@ -22,7 +22,7 @@ jobs:
         with:
           key: go-cache
           path: |
-            ${{ HOME }}/go
+            ~/go
             ${{ GITHUB_WORKSPACE }}
 
   docker-build:
