@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/disgoorg/disgo/voice"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,11 +18,13 @@ import (
 var mutex = sync.Mutex{}
 
 func Talk(conn voice.Conn, filePath string, def func() error, undef func() error) error {
+	slog.Info("Starting Talk path", "filePath", filePath)
 	sound, err := LoadSound(filePath)
 	if err != nil {
 		return err
 	}
 	err = PlaySound(conn, sound, def, undef)
+	slog.Info("finished Talk path", "filePath", filePath)
 	return err
 }
 
@@ -39,15 +41,15 @@ func PlaySound(conn voice.Conn, buffer [][]byte, def func() error, undef func() 
 	if _, err := conn.UDP().Write(voice.SilenceAudioFrame); err != nil {
 		return err
 	}
-	log.Println("Starting writing packets")
+	slog.Info("Starting writing packets")
 	for _, buff := range buffer {
 		_, err := conn.UDP().Write(buff)
 		if err != nil {
-			log.Fatal()
+			panic(err)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	log.Println("Finished writing packets")
+	slog.Info("Finished writing packets")
 	mutex.Unlock()
 	err = undef()
 	if err != nil {
@@ -57,7 +59,7 @@ func PlaySound(conn voice.Conn, buffer [][]byte, def func() error, undef func() 
 }
 
 func LoadSound(filePath string) ([][]byte, error) {
-
+	slog.Info("loading sound", "filePath", filePath)
 	dca, err := convertMp3ToDca(filePath)
 	if err != nil {
 		panic(err)
@@ -110,14 +112,14 @@ func LoadSound(filePath string) ([][]byte, error) {
 func convertMp3ToDca(mp3filePath string) (string, error) {
 
 	if _, err := os.Stat(mp3filePath); os.IsNotExist(err) {
-		log.Printf("mp3 file not exists: %s", mp3filePath)
+		slog.Info("mp3 file not exists:", "mp3filePath", mp3filePath)
 		panic(err)
 	}
 
 	dcaFile := changeDirAndExtension(mp3filePath)
 
 	if _, err := os.Stat(dcaFile); !os.IsNotExist(err) {
-		log.Printf("Already converted mp3 file %s", dcaFile)
+		slog.Info("Already converted mp3 file", "dcaFile", dcaFile)
 		return dcaFile, nil
 	}
 
@@ -129,49 +131,49 @@ func convertMp3ToDca(mp3filePath string) (string, error) {
 		"pipe:1",
 	)
 	// Define the dca command and its output file
-	dcaCmd := exec.Command("/opt/dca")
+	dcaCmd := exec.Command("./dca")
 	outputFile := changeDirAndExtension(mp3filePath)
 
 	// Pipe the output of ffmpeg to dca
 	ffmpegOut, err := ffmpegCmd.StdoutPipe()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 	}
 	dcaCmd.Stdin = ffmpegOut
 	// Create the output file
 	dcaOut, err := os.Create(outputFile)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 	}
 	defer dcaOut.Close()
 	dcaCmd.Stdout = dcaOut
 
 	// Start the ffmpeg command
 	if err := ffmpegCmd.Start(); err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 		return "", err
 	}
 
 	// Start the dca command
 	if err := dcaCmd.Start(); err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 		return "", err
 	}
 
 	// Wait for ffmpeg to finish
 	if err := ffmpegCmd.Wait(); err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 		return "", err
 	}
 
 	// Wait for dca to finish
 	if err := dcaCmd.Wait(); err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 		return "", err
 	}
 
-	log.Println("Conversion completed successfully!")
-	log.Println("dca filepath :", outputFile)
+	slog.Info("Conversion completed successfully!")
+	slog.Info("dca filepath:", "outputFile", outputFile)
 	return outputFile, nil
 }
 

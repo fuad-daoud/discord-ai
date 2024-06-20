@@ -12,12 +12,12 @@ import (
 	"github.com/fuad-daoud/discord-ai/integrations/gpt"
 	"github.com/fuad-daoud/discord-ai/integrations/respeecher"
 	"golang.org/x/net/context"
-	"log"
+	"log/slog"
 	"time"
 )
 
 func handleDeepgramVoicePackets(conn voice.Conn, deepgram deepgram.Client, finishedCallback deepgram.FinishedCallBack, client bot.Client) {
-
+	slog.Info("Added packets handler")
 	for {
 		packet, err := conn.UDP().ReadPacket()
 		if err != nil {
@@ -27,7 +27,7 @@ func handleDeepgramVoicePackets(conn voice.Conn, deepgram deepgram.Client, finis
 
 		voiceState, b := client.Caches().VoiceState(guildId, client.ApplicationID())
 		if !b {
-			log.Fatal("bot not connected to a voice channel")
+			slog.Error("bot not connected to a voice channel")
 		}
 		if voiceState.SelfDeaf {
 			continue
@@ -38,11 +38,11 @@ func handleDeepgramVoicePackets(conn voice.Conn, deepgram deepgram.Client, finis
 
 func finishedCallBack(conn voice.Conn, client bot.Client, gptClient gpt.Client, respeecherClient respeecher.Client, channelId string) deepgram.FinishedCallBack {
 	return func(message string, SSRC uint32) {
-		log.Println("got SSRC", SSRC)
+		slog.Info("got", "SSRC", SSRC)
 		userId := conn.UserIDBySSRC(SSRC)
 		user, err := client.Rest().GetUser(userId)
 		if err != nil {
-			log.Fatal("could not get user: ", userId, err)
+			slog.Error("could not get user: ", userId, err)
 		}
 		detect, response := gptClient.Detect(message, gpt.MetaData{
 			UserId:    userId.String(),
@@ -57,20 +57,20 @@ func finishedCallBack(conn voice.Conn, client bot.Client, gptClient gpt.Client, 
 
 		userState, userStateOk := client.Caches().VoiceState(guildId, userId)
 		if !userStateOk {
-			log.Fatal("User voice state not okay")
+			slog.Error("User voice state not okay")
 		}
 		err = client.UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, true)
 		if err != nil {
-			log.Fatal("could not update voice state: ", err)
+			slog.Error("could not update voice state: ", err)
 		}
 
 		path, err := respeecherClient.DefaultTextToSpeech(response)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		selfUser, b := client.Caches().SelfUser()
 		if !b {
-			log.Fatal("could not get self user")
+			slog.Error("could not get self user")
 		}
 		go handleThread(client, channelId, selfUser.User, response)
 
@@ -80,7 +80,7 @@ func finishedCallBack(conn voice.Conn, client bot.Client, gptClient gpt.Client, 
 			return client.UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
 		})
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 }
@@ -95,16 +95,16 @@ func finishedCallBack(conn voice.Conn, client bot.Client, gptClient gpt.Client, 
 //	func indicator(conn voice.Conn, file string) {
 //		err := Talk(conn, "files/fixed-replies/"+file)
 //		if err != nil {
-//			log.Fatal(err)
+//			panic(err)
 //		}
 //	}
 func handleThread(client bot.Client, threadId string, user discord.User, message string) {
 	message = fmt.Sprintf("%s: %s", user.Mention(), message)
 	createMessage, err := client.Rest().CreateMessage(snowflake.MustParse(threadId), discord.MessageCreate{Content: message})
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	log.Println("Created message ", createMessage.ID)
+	slog.Info("Created message", "ID", createMessage.ID)
 }
 func CommandsHandler(client bot.Client, gptClient gpt.Client, deepgramClient deepgram.Client, respeecherClient respeecher.Client) {
 	chanRun := gptClient.GetChanRequiredAction()
@@ -121,7 +121,7 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 		if err != nil {
 			return
 		}
-		log.Println("Got channel ", channel.Name())
+		slog.Info("got channel", "channel", channel.Name())
 
 		data := gpt.MetaData{
 			UserId:    event.Message.Author.ID.String(),
@@ -131,7 +131,7 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 		if channel.Type() == discord.ChannelTypeGuildPublicThread {
 			var process Process
 			thread := channel.(discord.GuildThread)
-			log.Println("Got thread ", thread.ID())
+			slog.Info("Got thread", "ID", thread.ID())
 			if thread.ParentID().String() == "1252536839886082109" {
 				process = func(message string, data gpt.MetaData) string {
 					botState, botStateOk := event.Client().Caches().VoiceState(*event.GuildID, event.Client().ApplicationID())
@@ -143,18 +143,18 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 					go func() {
 						err := event.Client().Rest().SendTyping(thread.ID())
 						if err != nil {
-							log.Fatal(err)
+							panic(err)
 						}
 					}()
 					go func() {
 						if botStateOk && botState.ChannelID.String() == userState.ChannelID.String() {
 
 							if err != nil {
-								log.Fatal(err)
+								panic(err)
 							}
 							err := event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, true)
 							if err != nil {
-								log.Fatal(err)
+								panic(err)
 							}
 						}
 					}()
@@ -168,7 +168,7 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 						Style:  respeecher.Oksana.Styles["HushedRaspy"],
 					})
 					if err != nil {
-						log.Fatal(err)
+						panic(err)
 					}
 					go func() {
 						if botStateOk && botState.ChannelID.String() == userState.ChannelID.String() {
@@ -179,7 +179,7 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 								return event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, false)
 							})
 							if err != nil {
-								log.Fatal(err)
+								panic(err)
 							}
 							return
 						}
@@ -188,7 +188,7 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 						conn := event.Client().VoiceManager().CreateConn(*event.GuildID)
 						err = conn.Open(ctx, *userState.ChannelID, false, false)
 						if err != nil {
-							log.Fatal(err)
+							panic(err)
 						}
 						err = Talk(conn, speech, func() error {
 							return event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, true)
@@ -196,7 +196,7 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 							return event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, false)
 						})
 						if err != nil {
-							log.Fatal(err)
+							panic(err)
 						}
 					}()
 					return response
@@ -220,9 +220,9 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 			}
 			thread, err := restClient.CreateThreadFromMessage(channel.ID(), event.MessageID, discord.ThreadCreateFromMessage{Name: gptThreadId, AutoArchiveDuration: 1440})
 			if err != nil {
-				log.Fatal("could not create thread", err.Error())
+				slog.Error("could not create thread", err.Error())
 			}
-			log.Println("Created thread id", thread.ID())
+			slog.Info("Created thread", "ID", thread.ID())
 			data.ChannelId = thread.ID().String()
 			replyText(data, event.Message.Content, restClient, func(message string, data gpt.MetaData) string {
 				return response
@@ -233,7 +233,8 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 }
 
 func BotIsUp(r *events.Ready) {
-	log.Println("Bot is up!")
+	slog.Info("Bot is up!")
+	//r.Client().Rest().UpdateCurrentUserVoiceState(r.Guilds[0].ID, discord.CurrentUserVoiceStateUpdate{ChannelID: })
 }
 func replyText(data gpt.MetaData, content string, client rest.Rest, process Process) {
 	processingMessage := fmt.Sprintf("%s", "Dazzling✨💫")
@@ -243,15 +244,15 @@ func replyText(data gpt.MetaData, content string, client rest.Rest, process Proc
 		Content: processingMessage,
 	})
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	response := process(content, data)
 	updateMessage, err := client.UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: &response})
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	log.Printf("updated message: %#v\n", updateMessage.ID.String())
+	slog.Info("updated message:", "ID", updateMessage.ID.String())
 }
 
 type Process func(message string, data gpt.MetaData) string
@@ -260,12 +261,12 @@ func VoiceServerUpdateHandler(deepgramClient deepgram.Client) func(event *events
 	return func(event *events.GuildVoiceStateUpdate) {
 
 		if event.Member.User.ID == event.Client().ID() {
-			log.Println("Update on bot voice state")
+			slog.Info("Update on bot voice state")
 
 			newChannelId := event.GenericGuildVoiceState.VoiceState.ChannelID.String()
 
 			if len(newChannelId) == 0 {
-				log.Println("Disconnected from voice channel")
+				slog.Info("Disconnected from voice channel")
 				deepgramClient.Stop()
 			}
 		} else {

@@ -3,7 +3,7 @@ package gpt
 import (
 	"fmt"
 	"github.com/fuad-daoud/discord-ai/integrations/custom_http"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -58,7 +58,7 @@ func makeClient(threadId string) *Client {
 		Client:         client,
 		RequiredAction: make(chan Run),
 	}
-	log.Println("got gpt client threadId", gptClient.GetThreadId())
+	slog.Info("got gpt client threadId", "ID", gptClient.GetThreadId())
 	return &gptClient
 }
 func MakeClient() Client {
@@ -79,13 +79,14 @@ func MakeClient() Client {
 		RequiredAction: make(chan Run),
 	}
 	gptClient.CreateThread()
-	log.Println("created gpt client threadId", gptClient.GetThreadId())
+	slog.Info("created gpt client threadId", "ID", gptClient.GetThreadId())
 	return gptClient
 }
 
 func (c *defaultClient) Detect(message string, data MetaData) (bool, string) {
 	response := c.SendMessageFullCycle("DETC:"+message, data)
-	log.Printf("got message: %s on detect response: %s", message, response)
+	slog.Info("got message: ", "txt", message)
+	slog.Info("on detect response: ", "txt", response)
 	if strings.ToLower(response) == "false" {
 		return false, ""
 	}
@@ -104,7 +105,7 @@ func (c *defaultClient) GetThreadId() string {
 }
 
 func (c *defaultClient) SendMessageFullCycle(message string, data MetaData) string {
-	log.Println("send message got", message)
+	slog.Info("send message got", "msg", message)
 	c.SendMessage(message)
 	c.RunThread()
 	c.CheckDone(data)
@@ -176,7 +177,7 @@ func (c *defaultClient) RunThread() Run {
 func (c *defaultClient) CheckDone(data MetaData) {
 	for {
 		status := c.Run.Status
-		log.Println("run status ", status)
+		slog.Info("run status ", "status", status)
 		if status == "completed" {
 			break
 		}
@@ -191,7 +192,7 @@ func (c *defaultClient) CheckDone(data MetaData) {
 			}
 		}
 		if status == "cancelled" || status == "failed" || status == "expired" || status == "cancelling" {
-			log.Fatal("stats run is not valid can't complete status:" + status)
+			slog.Error("stats run is not valid can't complete status:", status)
 		}
 
 		time.Sleep(100 * time.Millisecond)

@@ -23,10 +23,10 @@ package test
 //}
 //func test() {
 //
-//	//log.Println("Starting application bot with token", Token)
+//	//slog.Info("Starting application bot with token", Token)
 //	//session, err := discordgo.New("Bot " + Token)
 //	//if err != nil {
-//	//	log.Println("error creating Discord session:", err)
+//	//	slog.Info("error creating Discord session:", err)
 //	//	return
 //	//}
 //	//session.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.PermissionViewChannel
@@ -39,16 +39,16 @@ package test
 //	//
 //	//defer session.Close()
 //	//
-//	//log.Println("Bot is now running.  Press CTRL-C to exit.")
+//	//slog.Info("Bot is now running.  Press CTRL-C to exit.")
 //	//stop := make(chan os.Signal, 1)
 //	//signal.Notify(stop, os.Interrupt)
 //	//<-stop
-//	//log.Println("Graceful shutdown")
+//	//slog.Info("Graceful shutdown")
 //
 //}
 //
 //func BotIsUpHandler() func(s *discordgo.Session, r *discordgo.Ready) {
 //	return func(s *discordgo.Session, r *discordgo.Ready) {
-//		log.Println("Bot is up!")
+//		slog.Info("Bot is up!")
 //	}
 //}

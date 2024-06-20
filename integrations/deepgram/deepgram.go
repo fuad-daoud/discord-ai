@@ -4,7 +4,7 @@ import (
 	"github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
 	client "github.com/deepgram/deepgram-go-sdk/pkg/client/live"
 	"golang.org/x/net/context"
-	"log"
+	"log/slog"
 	"strings"
 )
 
@@ -40,9 +40,9 @@ func (dg *defaultClient) Write(p []byte, SSRC uint32, finishedCallback FinishedC
 	_, err := deepgramClient.Write(p)
 	if err != nil {
 		if dg.clients[SSRC] == nil {
-			log.Println("Stopping deepgram writing because client is stopped")
+			slog.Info("Stopping deepgram writing because client is stopped")
 		} else if strings.EqualFold(err.Error(), "websocket: close sent") {
-			log.Println("Stopping deepgram writing because ", err.Error())
+			slog.Info("Stopping deepgram writing because", "err", err.Error())
 		} else {
 			return
 		}
@@ -55,7 +55,7 @@ func getDeepgramClient(dg *defaultClient, SSRC uint32, finishedCallback Finished
 		// Configuration for the Client client
 		ctx := context.Background()
 		apiKey := "b3e84a4a52bf9a59b9be90b1fe40af900adaef52"
-		log.Println("Using API key:", apiKey)
+		slog.Info("Using API key:", "key", apiKey)
 		clientOptions := interfaces.ClientOptions{
 			APIKey:          "",
 			Host:            "",
@@ -108,7 +108,7 @@ func getDeepgramClient(dg *defaultClient, SSRC uint32, finishedCallback Finished
 			panic("client.Connect failed")
 		}
 
-		log.Println("Connected!")
+		slog.Info("Connected!")
 
 		dg.clients[SSRC] = dgClient
 
@@ -134,13 +134,13 @@ func stopWhenFinished(dg *defaultClient, SSRC uint32, callback *MyCallback, fini
 func (dg *defaultClient) Stop() {
 	for SSRC, deepgramClient := range dg.clients {
 		deepgramClient.Stop()
-		log.Println("Stopped Client client for SSRC:", SSRC)
+		slog.Info("Stopped Client client for SSRC:", "SSRC", SSRC)
 	}
 	dg.clients = nil
 }
 
 func (dg *defaultClient) StopSSRC(SSRC uint32) {
 	dg.clients[SSRC].Stop()
-	log.Println("Stopped Client client for SSRC:", SSRC)
+	slog.Info("Stopped Client client for SSRC:", "SSRC", SSRC)
 	delete(dg.clients, SSRC)
 }

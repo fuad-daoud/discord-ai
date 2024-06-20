@@ -8,7 +8,6 @@ import (
 	"github.com/fuad-daoud/discord-ai/integrations/gpt"
 	"github.com/fuad-daoud/discord-ai/integrations/respeecher"
 	"golang.org/x/net/context"
-	"log"
 	"log/slog"
 	"time"
 )
@@ -28,13 +27,13 @@ func CommandsProcessor(chanRun chan gpt.Run, client bot.Client, gptClient gpt.Cl
 }
 
 func JoinFunction(chanRun chan gpt.Run, client bot.Client, gptClient gpt.Client, deepgramClient deepgram.Client, respeecherClient respeecher.Client, run gpt.Run) {
-	log.Println("starting join function")
+	slog.Info("starting join function")
 	toolCallId := run.RequiredAction.SubmitToolOutputs.ToolCalls[0].Id
 	guildId := snowflake.MustParse(`847908927554322432`)
 	userId := snowflake.MustParse(run.MetaData.UserId)
 	voiceState, b := client.Caches().VoiceState(guildId, userId)
 	if !b {
-		log.Fatal("could not get voice state")
+		slog.Error("could not get voice state")
 	}
 
 	botState, botStateOk := client.Caches().VoiceState(guildId, client.ApplicationID())
@@ -61,17 +60,21 @@ func JoinFunction(chanRun chan gpt.Run, client bot.Client, gptClient gpt.Client,
 }
 
 func joinAndPlay(conn voice.Conn, run gpt.Run, deepgramClient deepgram.Client, respeecherClient respeecher.Client, gptClient gpt.Client, client bot.Client, channelId *snowflake.ID) {
+	slog.Info("Staring joinAndPlay function")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Hour*24)
 	defer cancel()
 	if err := conn.Open(ctx, *channelId, false, false); err != nil {
 		panic("error connecting to voice channel: " + err.Error())
 	}
+	slog.Info("opened connection successfully")
 	if err := conn.SetSpeaking(ctx, voice.SpeakingFlagMicrophone); err != nil {
 		panic("error setting speaking flag: " + err.Error())
 	}
+	slog.Info("set speaking successfully")
 	if _, err := conn.UDP().Write(voice.SilenceAudioFrame); err != nil {
 		panic("error sending silence: " + err.Error())
 	}
+	slog.Info("wrote silent frame successfully")
 
 	guildId := snowflake.MustParse(`847908927554322432`)
 
@@ -82,7 +85,7 @@ func joinAndPlay(conn voice.Conn, run gpt.Run, deepgramClient deepgram.Client, r
 		return client.UpdateVoiceState(context.Background(), guildId, channelId, false, false)
 	})
 	if err != nil {
-		log.Println("error talking to voice channel:", err)
+		slog.Info("error talking to voice channel:", "err", err)
 	}
 	data := run.MetaData
 	go handleDeepgramVoicePackets(conn, deepgramClient, finishedCallBack(conn, client, gptClient, respeecherClient, data.ChannelId), client)

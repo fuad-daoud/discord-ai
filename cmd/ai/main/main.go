@@ -11,6 +11,7 @@ import (
 	"github.com/fuad-daoud/discord-ai/integrations/respeecher"
 	"golang.org/x/net/context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -68,7 +69,6 @@ func main() {
 		),
 		bot.WithCacheConfigOpts(
 			cache.WithCaches(cache.FlagsAll),
-			//cache.WithMemberCache(cache.NewMemberCache(newGroupedCache[discord.Member]())),
 		),
 		bot.WithEventListenerFunc(discord.BotIsUp),
 		bot.WithEventListenerFunc(discord.VoiceServerUpdateHandler(deepgramClient)),
@@ -95,5 +95,5 @@ func main() {
 	}
 
 	//signal.Notify(stop, os.Interrupt)
-	log.Println("Graceful shutdown")
+	slog.Info("Graceful shutdown")
 }

@@ -5,10 +5,11 @@ import (
 	"github.com/forPelevin/gomoji"
 	"github.com/fuad-daoud/discord-ai/integrations/custom_http"
 	"github.com/google/uuid"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
@@ -142,14 +143,14 @@ func (dc DefaultClient) TextToSpeech(text string, voiceParams VoiceParams) (stri
 func getFilePath() string {
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	file := "files/wav/" + newUUID.String() + ".wav"
 	return file
 }
 
 func (dc DefaultClient) createOrder(result Response, voice VoiceParams) []Response {
-	log.Printf("voice params %v", voice)
+	slog.Info("voice params ", "voiceParams", voice)
 	data := strings.NewReader(fmt.Sprintf(`{
   "original_id": "%s",
   "conversions": [
@@ -191,9 +192,9 @@ func (dc DefaultClient) getRecording(secondResult []Response) Response {
 			break
 		}
 		if counter == 60 {
-			log.Fatal("could not find ready recording")
+			slog.Error("could not find ready recording")
 		}
-		//time.Sleep(300 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		dc.getRecordings(secondResult, &recording)
 		counter++
 	}
@@ -206,7 +207,7 @@ func (dc DefaultClient) getRecordings(secondResult []Response, recording *Respon
 	var recordings Recordings
 	dc.Client.DoJson(req, &recordings)
 
-	log.Println("Finding the record ", secondResult[0].OriginalId)
+	slog.Info("Finding the record ", "ID", secondResult[0].OriginalId)
 
 	for i := 0; i < len(recordings.List); i++ {
 		if recordings.List[i].OriginalId == secondResult[0].OriginalId {

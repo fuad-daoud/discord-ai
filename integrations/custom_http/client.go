@@ -3,7 +3,7 @@ package custom_http
 import (
 	"encoding/json"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -26,7 +26,7 @@ type DefaultClient struct {
 func (dc *DefaultClient) DoJson(req *http.Request, result any) {
 	body := dc.Do(req)
 	if err := json.Unmarshal(body, result); err != nil {
-		log.Fatalf("Can not unmarshal JSON\n%s", string(body))
+		slog.Error("Can not unmarshal JSON\n%s", string(body))
 	}
 	//log.Printf("url %s, json: %s", req.URL.Path, string(body))
 }
@@ -34,17 +34,16 @@ func (dc *DefaultClient) DoJson(req *http.Request, result any) {
 func (dc *DefaultClient) Do(req *http.Request) []byte {
 	resp, err := dc.Client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	if resp.StatusCode >= 400 {
-
-		log.Fatalf("status code is more than 400 status %s url: %s\nbody: %s", resp.Status, req.URL.String(), string(body))
+		slog.Error("status code is more than 400 status ", resp.Status, " url: ", req.URL.String(), "\nbody: ", string(body))
 	}
 	return body
 }
@@ -52,7 +51,7 @@ func (dc *DefaultClient) Do(req *http.Request) []byte {
 func (dc *DefaultClient) MakeRequest(method string, path string, data *strings.Reader) *http.Request {
 	req, err := http.NewRequest(method, dc.BaseURL+path, data)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	dc.setHeaders(req)
 	return req
@@ -60,7 +59,7 @@ func (dc *DefaultClient) MakeRequest(method string, path string, data *strings.R
 func (dc *DefaultClient) GetRequest(path string) *http.Request {
 	req, err := http.NewRequest("GET", dc.BaseURL+path, strings.NewReader(""))
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	dc.setHeaders(req)
 	return req
@@ -68,7 +67,7 @@ func (dc *DefaultClient) GetRequest(path string) *http.Request {
 func (dc *DefaultClient) PostRequest(path string, data *strings.Reader) *http.Request {
 	req, err := http.NewRequest("POST", dc.BaseURL+path, data)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	dc.setHeaders(req)
 	return req
@@ -76,7 +75,7 @@ func (dc *DefaultClient) PostRequest(path string, data *strings.Reader) *http.Re
 func (dc *DefaultClient) PostEmptyRequest(path string) *http.Request {
 	req, err := http.NewRequest("POST", dc.BaseURL+path, strings.NewReader(""))
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	dc.setHeaders(req)
 	return req
@@ -84,7 +83,7 @@ func (dc *DefaultClient) PostEmptyRequest(path string) *http.Request {
 func (dc *DefaultClient) MakeRequestNoHeaders(method string, path string, data *strings.Reader) *http.Request {
 	req, err := http.NewRequest(method, dc.BaseURL+path, data)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return req
 }
