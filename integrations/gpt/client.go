@@ -2,7 +2,7 @@ package gpt
 
 import (
 	"fmt"
-	"github.com/bwmarrin/discordgo/examples/voice_receive/custom_http"
+	"github.com/fuad-daoud/discord-ai/integrations/custom_http"
 	"log"
 	"net/http"
 	"os"
@@ -21,19 +21,46 @@ type Client interface {
 	SendMessageFullCycle(message string, metaData MetaData) string
 	GetThreadId() string
 	GetChanRequiredAction() chan Run
+	Detect(message string, data MetaData) (bool, string)
 }
 
 const (
 	AssistantId = "asst_X1g2Iqb5z4KHfaxmL3bBBP3I"
 )
 
-type DefaultClient struct {
+type defaultClient struct {
 	Thread         Thread
 	Run            Run
 	Client         custom_http.Client
 	RequiredAction chan Run
 }
 
+func GetClient(threadId string) *Client {
+	return makeClient(threadId)
+}
+
+func makeClient(threadId string) *Client {
+	headers := make(map[string]string)
+	headers["Content-Type"] = "application/json"
+	headers["Authorization"] = os.ExpandEnv("Bearer $OPENAI_API_KEY")
+	headers["Openai-Beta"] = "assistants=v2"
+	var client custom_http.Client = &custom_http.DefaultClient{
+		BaseURL: "https://api.openai.com",
+		Client:  &http.Client{},
+		Headers: headers,
+	}
+
+	var gptClient Client = &defaultClient{
+		Thread: Thread{
+			Id: threadId,
+		},
+		Run:            Run{},
+		Client:         client,
+		RequiredAction: make(chan Run),
+	}
+	log.Println("got gpt client threadId", gptClient.GetThreadId())
+	return &gptClient
+}
 func MakeClient() Client {
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
@@ -45,30 +72,46 @@ func MakeClient() Client {
 		Headers: headers,
 	}
 
-	return &DefaultClient{
+	var gptClient Client = &defaultClient{
 		Thread:         Thread{},
 		Run:            Run{},
 		Client:         client,
 		RequiredAction: make(chan Run),
 	}
+	gptClient.CreateThread()
+	log.Println("created gpt client threadId", gptClient.GetThreadId())
+	return gptClient
 }
 
-func (c *DefaultClient) GetChanRequiredAction() chan Run {
+func (c *defaultClient) Detect(message string, data MetaData) (bool, string) {
+	response := c.SendMessageFullCycle("DETC:"+message, data)
+	log.Printf("got message: %s on detect response: %s", message, response)
+	if strings.ToLower(response) == "false" {
+		return false, ""
+	}
+	if strings.ToLower(response) == "maybe" {
+		return false, ""
+	}
+	return true, response
+}
+
+func (c *defaultClient) GetChanRequiredAction() chan Run {
 	return c.RequiredAction
 }
 
-func (c *DefaultClient) GetThreadId() string {
+func (c *defaultClient) GetThreadId() string {
 	return c.Thread.Id
 }
 
-func (c *DefaultClient) SendMessageFullCycle(message string, data MetaData) string {
+func (c *defaultClient) SendMessageFullCycle(message string, data MetaData) string {
+	log.Println("send message got", message)
 	c.SendMessage(message)
 	c.RunThread()
 	c.CheckDone(data)
 	messages := c.GetMessages()
 	return messages.Data[0].Content[0].Text.Value
 }
-func (c *DefaultClient) GetMessages() Messages {
+func (c *defaultClient) GetMessages() Messages {
 	req := c.Client.GetRequest(fmt.Sprintf("/v1/threads/%s/messages", c.Run.ThreadId))
 
 	var messages Messages
@@ -76,7 +119,7 @@ func (c *DefaultClient) GetMessages() Messages {
 	return messages
 }
 
-func (c *DefaultClient) CreateThread() Thread {
+func (c *defaultClient) CreateThread() Thread {
 	req := c.Client.PostEmptyRequest("/v1/threads")
 
 	var thread Thread
@@ -85,7 +128,7 @@ func (c *DefaultClient) CreateThread() Thread {
 	c.Thread = thread
 	return thread
 }
-func (c *DefaultClient) SubmitToolOutputs(toolCallId string, output OutputTool) *Run {
+func (c *defaultClient) SubmitToolOutputs(toolCallId string, output OutputTool) *Run {
 	body := strings.NewReader(fmt.Sprintf(
 		`{
     "tool_outputs": [
@@ -105,7 +148,7 @@ func (c *DefaultClient) SubmitToolOutputs(toolCallId string, output OutputTool) 
 	return &run
 }
 
-func (c *DefaultClient) SendMessage(message string) {
+func (c *defaultClient) SendMessage(message string) {
 	body := strings.NewReader(fmt.Sprintf(
 		`{
       "role": "user",
@@ -116,7 +159,7 @@ func (c *DefaultClient) SendMessage(message string) {
 	c.Client.DoJson(req, &not_used)
 }
 
-func (c *DefaultClient) RunThread() Run {
+func (c *defaultClient) RunThread() Run {
 	body := strings.NewReader(fmt.Sprintf(
 		`{
     "assistant_id": "%s"
@@ -130,7 +173,7 @@ func (c *DefaultClient) RunThread() Run {
 	return run
 }
 
-func (c *DefaultClient) CheckDone(data MetaData) {
+func (c *defaultClient) CheckDone(data MetaData) {
 	for {
 		status := c.Run.Status
 		log.Println("run status ", status)
@@ -156,7 +199,7 @@ func (c *DefaultClient) CheckDone(data MetaData) {
 	}
 }
 
-func (c *DefaultClient) GetRun() *Run {
+func (c *defaultClient) GetRun() *Run {
 	req := c.Client.GetRequest(fmt.Sprintf("/v1/threads/%s/runs/%s", c.Run.ThreadId, c.Run.Id))
 
 	c.Client.DoJson(req, &c.Run)

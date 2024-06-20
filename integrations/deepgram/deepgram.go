@@ -14,19 +14,23 @@ type Client interface {
 	Stop()
 	MapSSRC(SSRC int, userId string)
 }
-type DefaultClient struct {
+type defaultClient struct {
 	clients map[uint32]*client.Client
 	users   map[int]string
 }
 
-func (dg *DefaultClient) MapSSRC(SSRC int, userId string) {
+func MakeDefault() Client {
+	return &defaultClient{}
+}
+
+func (dg *defaultClient) MapSSRC(SSRC int, userId string) {
 	if dg.users == nil {
 		dg.users = make(map[int]string)
 	}
 	dg.users[SSRC] = userId
 }
 
-func (dg *DefaultClient) Write(p []byte, SSRC uint32, finishedCallback FinishedCallBack) {
+func (dg *defaultClient) Write(p []byte, SSRC uint32, finishedCallback FinishedCallBack) {
 
 	if dg.clients == nil {
 		dg.clients = make(map[uint32]*client.Client)
@@ -46,7 +50,7 @@ func (dg *DefaultClient) Write(p []byte, SSRC uint32, finishedCallback FinishedC
 	//log.Printf("Client: %d bytes from deepgramClient \n", bytes)
 }
 
-func getDeepgramClient(dg *DefaultClient, SSRC uint32, finishedCallback FinishedCallBack) *client.Client {
+func getDeepgramClient(dg *defaultClient, SSRC uint32, finishedCallback FinishedCallBack) *client.Client {
 	if dg.clients[SSRC] == nil {
 		// Configuration for the Client client
 		ctx := context.Background()
@@ -115,20 +119,19 @@ func getDeepgramClient(dg *DefaultClient, SSRC uint32, finishedCallback Finished
 	return dg.clients[SSRC]
 }
 
-type FinishedCallBack func(message string, userId string)
+type FinishedCallBack func(message string, SRRC uint32)
 
-func stopWhenFinished(dg *DefaultClient, SSRC uint32, callback *MyCallback, finishedCallback FinishedCallBack) {
+func stopWhenFinished(dg *defaultClient, SSRC uint32, callback *MyCallback, finishedCallback FinishedCallBack) {
 	finished := <-callback.SpeechFinal
 	if finished {
-
 		dg.StopSSRC(SSRC)
 
-		finishedCallback(callback.sentence, dg.users[int(SSRC)])
+		finishedCallback(callback.sentence, SSRC)
 	}
 
 }
 
-func (dg *DefaultClient) Stop() {
+func (dg *defaultClient) Stop() {
 	for SSRC, deepgramClient := range dg.clients {
 		deepgramClient.Stop()
 		log.Println("Stopped Client client for SSRC:", SSRC)
@@ -136,7 +139,7 @@ func (dg *DefaultClient) Stop() {
 	dg.clients = nil
 }
 
-func (dg *DefaultClient) StopSSRC(SSRC uint32) {
+func (dg *defaultClient) StopSSRC(SSRC uint32) {
 	dg.clients[SSRC].Stop()
 	log.Println("Stopped Client client for SSRC:", SSRC)
 	delete(dg.clients, SSRC)

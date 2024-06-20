@@ -2,14 +2,13 @@ package respeecher
 
 import (
 	"fmt"
-	"github.com/bwmarrin/discordgo/examples/voice_receive/custom_http"
 	"github.com/forPelevin/gomoji"
+	"github.com/fuad-daoud/discord-ai/integrations/custom_http"
 	"github.com/google/uuid"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 var (
@@ -49,7 +48,7 @@ var (
 	OksanaDefault = VoiceParams{
 		Id:     Oksana.Id,
 		Accent: Oksana.Accents["EnUSAccent"],
-		Style:  Oksana.Styles["BubblyLively"],
+		Style:  Oksana.Styles["HushedRaspy"],
 	}
 	Laura = Voice{
 		Id: "f812c129-0497-4126-a558-037a372052cf",
@@ -194,7 +193,7 @@ func (dc DefaultClient) getRecording(secondResult []Response) Response {
 		if counter == 60 {
 			log.Fatal("could not find ready recording")
 		}
-		time.Sleep(500 * time.Millisecond)
+		//time.Sleep(300 * time.Millisecond)
 		dc.getRecordings(secondResult, &recording)
 		counter++
 	}

@@ -43,7 +43,8 @@ func (dc *DefaultClient) Do(req *http.Request) []byte {
 		log.Fatal(err)
 	}
 	if resp.StatusCode >= 400 {
-		log.Fatalf("status code is more than 400 status %s url: %s", resp.Status, req.URL.String())
+
+		log.Fatalf("status code is more than 400 status %s url: %s\nbody: %s", resp.Status, req.URL.String(), string(body))
 	}
 	return body
 }
