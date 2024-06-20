@@ -38,8 +38,8 @@ jobs:
             ${{ GITHUB_WORKSPACE }}
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag discord-ai:${{ GITHUB_SHA }}
-  publish:
-
-    runs-on:
-    needs: [docker-build]
+#  publish:
+#
+#    runs-on:
+#    needs: [docker-build]
 
