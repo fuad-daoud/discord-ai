@@ -16,7 +16,8 @@ jobs:
       - name: Checkout the repo
         uses: actions/checkout@v4
       - name: go build
-        run: go build -o ${{ env.GITHUB_WORKSPACE }}/discord-ai ${{ env.GITHUB_WORKSPACE }}/cmd/ai/main/main.go
+        run: go build -o ${{ GITHUB_WORKSPACE }}/discord-ai ${{ GITHUB_WORKSPACE }}/cmd/ai/main/main.go
+
       - name: Cache files
         uses: actions/cache@v4
         with:
