@@ -36,7 +36,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "discord-ai--${{ github.sha }}"
+          pattern: "discord-ai-${{ github.sha }}"
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
         with:
@@ -44,6 +44,8 @@ jobs:
             Dockerfile
           sparse-checkout-cone-mode: false
           show-progress: true
+      - name: Display structure of downloaded files
+        run: ls -R
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
 #  publish:
