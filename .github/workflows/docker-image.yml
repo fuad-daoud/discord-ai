@@ -67,7 +67,7 @@ jobs:
           service_account: 'fuad-a-daoud-gmail-com@digitallands-project.iam.gserviceaccount.com'
           create_credentials_file: true
       - name: Login to Artifact Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           registry: me-west1-docker.pkg.dev
           username: oauth2accesstoken
@@ -75,7 +75,7 @@ jobs:
       - name: Get tag
         id: get-tag
 #        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
-        run: echo ${{ github.sha }}
+        run: echo ::set-output name=short_ref::${GITHUB_SHA}
       - name: Get image name
         id: image-name
         run: echo ::set-output name=image::${me-west1-docker.pkg.dev/digitallands/docker/discord-ai:${{ steps.get-tag.outputs.short_ref }}}
