@@ -19,4 +19,11 @@ jobs:
         with:
           show-progress: true
       - name: go build
-        run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
+        run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"Z
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: "discord-ai-${{ github.ref_name }}"
+          path: ${{ github.workspace }}/discord-ai
+          retention-days: 1
+          if-no-files-found: error
