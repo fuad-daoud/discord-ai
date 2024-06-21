@@ -85,7 +85,7 @@ jobs:
           pattern: "discord-ai-${{ github.sha }}"
           path: ${{ github.workspace }}
           merge-multiple: true
-
+      - run: ls -R
       - name: Tag Docker image and push to Google Artifact Registry
         uses: docker/build-push-action@v6
         id: docker-push-tagged
@@ -99,7 +99,7 @@ jobs:
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ vars.SERVICE }}
-          image: ${{ env.IMAGE_FULL_PATH }}
+          image: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
           region: ${{ vars.REGION }}
 #  publish:
 #
