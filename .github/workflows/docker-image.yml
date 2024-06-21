@@ -59,6 +59,14 @@ jobs:
 #      contents: 'read'
 #      id-token: 'write'
 #    steps:
+      - name: Checkout the Dockerfile
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Dockerfile
+            dca
+          sparse-checkout-cone-mode: false
+          show-progress: true
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         id: auth
@@ -74,32 +82,14 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
       #        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-      - name: Checkout the Dockerfile
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            Dockerfile
-            dca
-          sparse-checkout-cone-mode: false
-          show-progress: true
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: "discord-ai-${{ github.sha }}"
           path: ${{ github.workspace }}
           merge-multiple: true
-      - run: ls -R
-      - name: Logout from docker
-        run: cat ~/.docker/config.json
       - name: upload
         run: docker push ${{ vars.IMAGE_PATH }}:${{ github.sha }}
-#      - name: Tag Docker image and push to Google Artifact Registry
-#        uses: docker/build-push-action@v6
-#        id: docker-push-tagged
-#        with:
-#          push: true
-#          tags: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
-
 
       - name: Update cloud run service
         id: 'deploy'
