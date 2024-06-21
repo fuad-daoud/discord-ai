@@ -58,11 +58,33 @@ jobs:
       contents: 'read'
       id-token: 'write'
     steps:
-      - uses: 'google-github-actions/auth@v2'
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        id: auth
         with:
           workload_identity_provider: 'projects/981651558497/locations/global/workloadIdentityPools/github-actions/providers/github'
           service_account: 'fuad-a-daoud-gmail-com@digitallands-project.iam.gserviceaccount.com'
           create_credentials_file: true
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v1
+        with:
+          registry: me-west1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      - name: Get tag
+        id: get-tag
+#        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
+        run: echo ${{ github.sha }}
+      - name: Get image name
+        id: image-name
+        run: echo ::set-output name=image::${me-west1-docker.pkg.dev/digitallands/docker/discord-ai:${{ steps.get-tag.outputs.short_ref }}}
+      - name: Tag Docker image and push to Google Artifact Registry
+        uses: docker/build-push-action@v2
+        id: docker-push-tagged
+        with:
+          push: true
+          tags: ${{ steps.image-name.outputs.image }}
+
       - name: Update cloud run service
         id: 'deploy'
         uses: 'google-github-actions/deploy-cloudrun@v2'
