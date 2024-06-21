@@ -38,9 +38,9 @@ jobs:
         with:
           sparse-checkout: |
             Dockerfile
+            dca
           sparse-checkout-cone-mode: false
           show-progress: true
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -61,3 +61,6 @@ jobs:
 #    runs-on:
 #    needs: [docker-build]
 
+
+
+#  s-1vcpu-512mb-10gb

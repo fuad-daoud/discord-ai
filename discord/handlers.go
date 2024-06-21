@@ -213,6 +213,8 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 			}
 			gptClient := gpt.MakeClient()
 			gptThreadId := gptClient.GetThreadId()
+			//TODO: there is a wrong thread id being passed to the finished call back because its the channelId not the threadId since it was not yet created
+			// might need to change where the commands handler is being called
 			go CommandsHandler(event.Client(), gptClient, deepgramClient, respeecherClient)
 			detect, response := gptClient.Detect(event.Message.Content, data)
 			if !detect {

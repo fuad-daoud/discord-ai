@@ -76,17 +76,17 @@ func joinAndPlay(conn voice.Conn, run gpt.Run, deepgramClient deepgram.Client, r
 	}
 	slog.Info("wrote silent frame successfully")
 
-	guildId := snowflake.MustParse(`847908927554322432`)
+	//guildId := snowflake.MustParse(`847908927554322432`)
 
-	slog.Info("starting playback")
-	err := Talk(conn, "files/fixed-replies/hey-luna-is-here-oksana.wav", func() error {
-		return client.UpdateVoiceState(context.Background(), guildId, channelId, false, true)
-	}, func() error {
-		return client.UpdateVoiceState(context.Background(), guildId, channelId, false, false)
-	})
-	if err != nil {
-		slog.Info("error talking to voice channel:", "err", err)
-	}
+	//slog.Info("starting playback")
+	//err := Talk(conn, "files/fixed-replies/hey-luna-is-here-oksana.wav", func() error {
+	//	return client.UpdateVoiceState(context.Background(), guildId, channelId, false, true)
+	//}, func() error {
+	//	return client.UpdateVoiceState(context.Background(), guildId, channelId, false, false)
+	//})
+	//if err != nil {
+	//	slog.Info("error talking to voice channel:", "err", err)
+	//}
 	data := run.MetaData
 	go handleDeepgramVoicePackets(conn, deepgramClient, finishedCallBack(conn, client, gptClient, respeecherClient, data.ChannelId), client)
 }
