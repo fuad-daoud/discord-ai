@@ -47,7 +47,7 @@ jobs:
           path: ${{ github.workspace }}
           merge-multiple: true
       - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag ${"IMAGE_PATH:GITHUB_SHA"}
+        run: docker build . --file Dockerfile --tag "$IMAGE_PATH:$GITHUB_SHA"
 
   gcloud-deploy:
     runs-on: ubuntu-latest
