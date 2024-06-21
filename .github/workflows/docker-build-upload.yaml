@@ -1,0 +1,52 @@
+name: Docker Build Upload
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  create:
+    tags: ["*"]
+
+jobs:
+  docker-build-upload:
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout the Dockerfile
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Dockerfile
+            dca
+          sparse-checkout-cone-mode: false
+          show-progress: true
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "discord-ai-${{ github.ref_name }}"
+          path: ${{ github.workspace }}
+          merge-multiple: true
+      - name: fix permissions
+        run: chmod 755 discord-ai && chmod 755 dca
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
+          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: me-west1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      - name: upload
+        run: docker push ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
+

@@ -1,0 +1,24 @@
+name: Go Build Docker Build
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "main" ]
+  create:
+    tags: ["*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.22.4-bookworm
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          show-progress: true
+      - name: go build
+        run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
