@@ -98,7 +98,7 @@ jobs:
         id: docker-push-tagged
         with:
           push: true
-          tags: ${{ env.IMAGE_FULL_PATH }}
+          tags: ${{ env.MY_TAG }}
 
 
       - name: Update cloud run service
