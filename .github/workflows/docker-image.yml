@@ -18,26 +18,27 @@ jobs:
       - name: go build
         run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
 
-      - name: Cache files
-        uses: actions/cache/save@v4
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
         with:
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('$GITHUB_WORKSPACE/discord-ai') }}
-          path: |
-            ${{ env.HOME }}/go
-            ${{ env.GITHUB_WORKSPACE }}
+          name: "discord-ai-${{ env.github.sha }}"
+          path: ${{ env.GITHUB_WORKSPACE }}/discord-ai
+      - name: Upload Dockerfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: "dockerfile-${{ env.github.sha }}"
+          path: ${{ env.GITHUB_WORKSPACE }}/Dockerfile
 
   docker-build:
     runs-on: ubuntu-latest
     needs: [go-build]
     steps:
-      - name: Cache files
-        uses: actions/cache/restore@v4
-        id: cache
+      - name: Download artifacts
+        uses: actions/downlaod-artifact@v4
         with:
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('$GITHUB_WORKSPACE/discord-ai') }}
-          path: |
-            ${{ env.HOME }}/go
-            ${{ env.GITHUB_WORKSPACE }}
+          pattern: "**-${{ env.github.sha }}"
+          path: ${{ env.GITHUB_WORKSPACE }}/discord-ai
+
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
 #  publish:
