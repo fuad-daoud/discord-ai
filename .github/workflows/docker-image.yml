@@ -49,6 +49,8 @@ jobs:
           pattern: "discord-ai-${{ github.sha }}"
           path: ${{ github.workspace }}
           merge-multiple: true
+      - name: fix permissions
+        run: chmod 755 discord-ai && chmod 755 dca
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:$GITHUB_SHA"
 
@@ -82,12 +84,12 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
       #        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: "discord-ai-${{ github.sha }}"
-          path: ${{ github.workspace }}
-          merge-multiple: true
+#      - name: Download artifacts
+#        uses: actions/download-artifact@v4
+#        with:
+#          pattern: "discord-ai-${{ github.sha }}"
+#          path: ${{ github.workspace }}
+#          merge-multiple: true
       - name: upload
         run: docker push ${{ vars.IMAGE_PATH }}:${{ github.sha }}
 
