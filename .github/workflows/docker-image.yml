@@ -69,6 +69,7 @@ jobs:
         with:
           service: 'discord-ai'
           image: 'me-west1-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.0.1'
+          region: 'me-west1'
 #  publish:
 #
 #    runs-on:
