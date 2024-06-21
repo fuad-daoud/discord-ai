@@ -1,8 +1,12 @@
 name: Release
 
 on:
-  create:
+  workflow_run:
+    workflows: [ "Docker Build Upload" ]
     tags: ["*"]
+    types:
+      - completed
+
 
 jobs:
   deploy:

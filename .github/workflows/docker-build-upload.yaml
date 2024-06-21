@@ -1,11 +1,11 @@
 name: Docker Build Upload
 on:
-  push:
+  workflow_run:
+    workflows: ["Go Build Docker Build"]
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  create:
     tags: ["*"]
+    types:
+      - completed
 
 jobs:
   docker-build-upload:
