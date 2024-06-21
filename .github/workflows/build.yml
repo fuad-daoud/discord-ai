@@ -20,5 +20,3 @@ jobs:
           show-progress: true
       - name: go build
         run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
-      - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
