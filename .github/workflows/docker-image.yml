@@ -70,9 +70,6 @@ jobs:
           registry: me-west1-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
-      - name: Get image name
-        id: image-name
-        run: echo "IMAGE_FULL_PATH=${{ vars.IMAGE_PATH }}:$GITHUB_SHA" >> $GITHUB_OUTPUT
       #        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
@@ -94,7 +91,7 @@ jobs:
         id: docker-push-tagged
         with:
           push: true
-          tags: ${{ env.IMAGE_FULL_PATH }}
+          tags: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
 
 
       - name: Update cloud run service
