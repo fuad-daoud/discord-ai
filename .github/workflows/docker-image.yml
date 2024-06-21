@@ -51,6 +51,21 @@ jobs:
         run: file "discord-ai-${{ github.sha }}"
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
+
+  gcloud-deploy:
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    steps:
+      - uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/981651558497/locations/global/workloadIdentityPools/github-actions/providers/github'
+          service_account: 'fuad-a-daoud-gmail-com@digitallands-project.iam.gserviceaccount.com'
+#      - name: Update cloud run service
+#        id: 'deploy'
+#        uses: 'google-github-actions/deploy-cloudrun@v2'
+#        with:
+#          service: 'discord-ai'
+#          image: 'me-west1-docker.pkg.dev/digitallands-project/docker/discord-ai:${{ github.sha }}'
 #  publish:
 #
 #    runs-on:
