@@ -76,7 +76,7 @@ jobs:
 #        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Get image name
         id: image-name
-        run: echo "IMAGE_FULL_PATH=${IMAGE_PATH:MY_TAG}" >> $GITHUB_OUTPUT
+        run: echo "IMAGE_FULL_PATH=$IMAGE_PATH:$MY_TAG" >> $GITHUB_OUTPUT
 
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
