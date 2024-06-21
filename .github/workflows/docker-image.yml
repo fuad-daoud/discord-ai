@@ -61,8 +61,8 @@ jobs:
         id: auth
         with:
           token_format: access_token
-          workload_identity_provider: 'projects/981651558497/locations/global/workloadIdentityPools/github-actions/providers/github'
-          service_account: 'fuad-a-daoud-gmail-com@digitallands-project.iam.gserviceaccount.com'
+          workload_identity_provider: ${{ GCLOUD_PROVIDER }}
+          service_account: ${{ GCLOUD_SERVICE_ACCOUNT }}
           create_credentials_file: true
       - name: Login to Artifact Registry
         uses: docker/login-action@v3
@@ -98,14 +98,14 @@ jobs:
         id: docker-push-tagged
         with:
           push: true
-          tags: ${{ IMAGE_FULL_PATH }}
+          tags: $IMAGE_FULL_PATH
 
       - name: Update cloud run service
         id: 'deploy'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ SERVICE }}
-          image: ${{ IMAGE_FULL_PATH }}
+          image: $IMAGE_FULL_PATH
           region: ${{ REGION }}
 #  publish:
 #
