@@ -235,7 +235,9 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 }
 
 func BotIsUp(r *events.Ready) {
+	user, _ := r.Client().Caches().SelfUser()
 	slog.Info("Bot is up!")
+	slog.Info("", "username", user.Username)
 	//r.Client().Rest().UpdateCurrentUserVoiceState(r.Guilds[0].ID, discord.CurrentUserVoiceStateUpdate{ChannelID: })
 }
 func replyText(data gpt.MetaData, content string, client rest.Rest, process Process) {
