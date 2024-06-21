@@ -46,6 +46,7 @@ jobs:
         with:
           pattern: "discord-ai-${{ github.sha }}"
           path: ${{ github.workspace }}
+          merge-multiple: true
       - name: Display current dir
         run: pwd
       - name: Display structure of downloaded files
