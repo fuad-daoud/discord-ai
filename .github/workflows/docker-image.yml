@@ -68,7 +68,7 @@ jobs:
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: 'discord-ai'
-          image: 'me-west1-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.0.1
+          image: 'me-west1-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.0.1'
 #  publish:
 #
 #    runs-on:
