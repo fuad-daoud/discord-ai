@@ -2,8 +2,7 @@ name: Docker Build Upload
 on:
   workflow_run:
     workflows: ["Go Build Docker Build"]
-    branches: [ "main" ]
-    tags: ["*"]
+    branches: [ "main", 'v*.*.*']
     types:
       - completed
 
@@ -32,8 +31,6 @@ jobs:
           merge-multiple: true
           github-token: ${{ github.token }}
           run-id: ${{ github.event.workflow_run.id }}
-      - run: pwd
-      - run: ls -R
       - name: fix permissions
         run: chmod 755 discord-ai && chmod 755 dca
       - name: Build the Docker image

@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_run:
     workflows: [ "Docker Build Upload" ]
-    tags: ["*"]
+    branches: [ 'v*.*.*']
     types:
       - completed
 
