@@ -87,7 +87,7 @@ jobs:
           merge-multiple: true
       - run: ls -R
       - name: Logout from docker
-        run: docker logout
+        run: cat ~/.docker/config.json
       - name: Tag Docker image and push to Google Artifact Registry
         uses: docker/build-push-action@v6
         id: docker-push-tagged
