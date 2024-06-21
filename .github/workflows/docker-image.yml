@@ -21,12 +21,12 @@ jobs:
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: "discord-ai-${{ env.github_sha }}"
+          name: "discord-ai-${{ github.sha }}"
           path: ${{ github.workspace }}/discord-ai
       - name: Upload Dockerfile
         uses: actions/upload-artifact@v4
         with:
-          name: "dockerfile-${{ env.github_sha }}"
+          name: "dockerfile-${{ github.sha }}"
           path: ${{ github.workspace }}/Dockerfile
 
   docker-build:
@@ -34,9 +34,9 @@ jobs:
     needs: [go-build]
     steps:
       - name: Download artifacts
-        uses: actions/downlaod-artifact@v4
+        uses: actions/download-artifact@v4
         with:
-          pattern: "**-${{ env.github_sha }}"
+          pattern: "**-${{ github.sha }}"
           path: ${{ github.workspace }}
 
       - name: Build the Docker image
