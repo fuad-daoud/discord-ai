@@ -67,7 +67,6 @@ jobs:
           registry: me-west1-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
-
       - name: upload
         run: docker push ${{ vars.IMAGE_PATH }}:${{ github.sha }}
       #        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
@@ -78,6 +77,8 @@ jobs:
           service: ${{ vars.SERVICE }}
           image: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
           region: ${{ vars.REGION }}
+      - name: check ready status
+        run: sleep 30s && if [$(curl -LI ${{ steps.deploy.outputs.url }}/status -o /dev/null -w '%{http_code}\n' -s) == "200"]; then exit 1
 #  publish:
 #
 #    runs-on:
