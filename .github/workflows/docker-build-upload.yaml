@@ -28,6 +28,8 @@ jobs:
           pattern: "discord-ai-${{ github.ref_name }}"
           path: ${{ github.workspace }}
           merge-multiple: true
+      - run: pwd
+      - run: ls -R
       - name: fix permissions
         run: chmod 755 discord-ai && chmod 755 dca
       - name: Build the Docker image
