@@ -46,8 +46,6 @@ jobs:
           pattern: "discord-ai-${{ github.sha }}"
           path: ${{ github.workspace }}
           merge-multiple: true
-      - name: Display structure of downloaded files
-        run: file "discord-ai-${{ github.sha }}"
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
 
@@ -75,24 +73,40 @@ jobs:
       - name: Get tag
         id: get-tag
 #        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
-        run: echo ::set-output name=short_ref::${GITHUB_SHA}
+        run: echo "MY_TAG=${GITHUB_SHA}" >> $GITHUB_OUTPUT
       - name: Get image name
         id: image-name
-        run: echo ::set-output name=image::${me-west1-docker.pkg.dev/digitallands/docker/discord-ai:${{ steps.get-tag.outputs.short_ref }}}
+        run: echo "IMAGE_FULL_PATH=${$IMAGE_PATH:$MY_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Checkout the Dockerfile
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Dockerfile
+            dca
+          sparse-checkout-cone-mode: false
+          show-progress: true
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "discord-ai-${{ github.sha }}"
+          path: ${{ github.workspace }}
+          merge-multiple: true
+
       - name: Tag Docker image and push to Google Artifact Registry
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         id: docker-push-tagged
         with:
           push: true
-          tags: ${{ steps.image-name.outputs.image }}
+          tags: ${{ IMAGE_FULL_PATH }}
 
       - name: Update cloud run service
         id: 'deploy'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
-          service: 'discord-ai'
-          image: 'me-west1-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.0.1'
-          region: 'me-west1'
+          service: ${{ SERVICE }}
+          image: ${{ IMAGE_FULL_PATH }}
+          region: ${{ REGION }}
 #  publish:
 #
 #    runs-on:
