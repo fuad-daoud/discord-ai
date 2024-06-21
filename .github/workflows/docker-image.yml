@@ -31,6 +31,9 @@ jobs:
   docker-build:
     runs-on: ubuntu-latest
     needs: [go-build]
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     steps:
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
@@ -49,13 +52,13 @@ jobs:
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:$GITHUB_SHA"
 
-  gcloud-deploy:
-    runs-on: ubuntu-latest
-    needs: [docker-build]
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
+#  gcloud-deploy:
+#    runs-on: ubuntu-latest
+#    needs: [docker-build]
+#    permissions:
+#      contents: 'read'
+#      id-token: 'write'
+#    steps:
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         id: auth
@@ -88,12 +91,14 @@ jobs:
       - run: ls -R
       - name: Logout from docker
         run: cat ~/.docker/config.json
-      - name: Tag Docker image and push to Google Artifact Registry
-        uses: docker/build-push-action@v6
-        id: docker-push-tagged
-        with:
-          push: true
-          tags: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
+      - name: upload
+        run: docker push ${{ vars.IMAGE_PATH }}:${{ github.sha }}
+#      - name: Tag Docker image and push to Google Artifact Registry
+#        uses: docker/build-push-action@v6
+#        id: docker-push-tagged
+#        with:
+#          push: true
+#          tags: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
 
 
       - name: Update cloud run service
