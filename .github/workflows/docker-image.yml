@@ -44,8 +44,11 @@ jobs:
             Dockerfile
           sparse-checkout-cone-mode: false
           show-progress: true
+      - name: Display current dir
+        run: pwd
       - name: Display structure of downloaded files
         run: ls -R
+
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
 #  publish:
