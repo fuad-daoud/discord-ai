@@ -27,10 +27,8 @@ jobs:
   docker-build-upload:
     runs-on: ubuntu-latest
     needs: ["build"]
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-      actions: 'read'
+    permissions: write-all
+
     steps:
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4

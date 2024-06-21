@@ -1,3 +1,4 @@
+[![Build](https://github.com/fuad-daoud/discord-ai/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/fuad-daoud/discord-ai/actions/workflows/build.yml)
 
 docker container `ubuntu:22.04`
 
