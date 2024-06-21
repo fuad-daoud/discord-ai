@@ -33,11 +33,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [go-build]
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: "discord-ai-${{ github.sha }}"
-          path: ${{ github.workspace }}
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
         with:
@@ -45,6 +40,12 @@ jobs:
             Dockerfile
           sparse-checkout-cone-mode: false
           show-progress: true
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "discord-ai-${{ github.sha }}"
+          path: ${{ github.workspace }}
       - name: Display current dir
         run: pwd
       - name: Display structure of downloaded files
