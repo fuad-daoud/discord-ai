@@ -70,17 +70,21 @@ jobs:
       - name: upload
         run: docker push ${{ vars.IMAGE_PATH }}:${{ github.sha }}
       #        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-      - name: Update cloud run service
-        id: 'deploy'
-        uses: 'google-github-actions/deploy-cloudrun@v2'
-        with:
-          service: ${{ vars.SERVICE }}
-          image: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
-          region: ${{ vars.REGION }}
-          env_vars: |
-            TOKEN=${{ vars.LUNA_TOKEN }}
-      - name: check ready status
-        run: echo "url at\n${{ steps.deploy.outputs.url }}"
+      - name: GitHub Tag Name example
+        run: |
+          echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
+          echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+#      - name: Update cloud run service
+#        id: 'deploy'
+#        uses: 'google-github-actions/deploy-cloudrun@v2'
+#        with:
+#          service: ${{ vars.SERVICE }}
+#          image: ${{ vars.IMAGE_PATH }}:${{ github.sha }}
+#          region: ${{ vars.REGION }}
+#          env_vars: |
+#            TOKEN=${{ vars.LUNA_TOKEN }}
+#      - name: bot url
+#        run: echo "url at\n${{ steps.deploy.outputs.url }}"
 #  publish:
 #
 #    runs-on:
