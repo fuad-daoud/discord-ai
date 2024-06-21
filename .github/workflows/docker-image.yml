@@ -24,7 +24,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "discord-ai-${{ github.sha }}"
-          path: ${{ env.GITHUB_WORKSPACE }}/discord-ai
+          path: ${{ github.workspace }}/discord-ai
+          retention-days: 1
+          if-no-files-found: error
 
 
   docker-build:
@@ -35,7 +37,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: "discord-ai--${{ github.sha }}"
-          path: ${{ env.GITHUB_WORKSPACE }}
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
         with:
