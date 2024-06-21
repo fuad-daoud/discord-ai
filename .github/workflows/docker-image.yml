@@ -47,13 +47,8 @@ jobs:
           pattern: "discord-ai-${{ github.sha }}"
           path: ${{ github.workspace }}
           merge-multiple: true
-      - name: Display current dir
-        run: pwd
-      - name: Display structure of downloaded files
-        run: ls -R
       - name: Display structure of downloaded files
         run: file "discord-ai-${{ github.sha }}"
-
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
 #  publish:
