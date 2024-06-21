@@ -21,13 +21,13 @@ jobs:
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: "discord-ai-${{ env.github.sha }}"
-          path: ${{ env.GITHUB_WORKSPACE }}/discord-ai
+          name: "discord-ai-${{ github.sha }}"
+          path: ${{ GITHUB_WORKSPACE }}/discord-ai
       - name: Upload Dockerfile
         uses: actions/upload-artifact@v4
         with:
-          name: "dockerfile-${{ env.github.sha }}"
-          path: ${{ env.GITHUB_WORKSPACE }}/Dockerfile
+          name: "dockerfile-${{ github.sha }}"
+          path: ${{ GITHUB_WORKSPACE }}/Dockerfile
 
   docker-build:
     runs-on: ubuntu-latest
@@ -36,8 +36,8 @@ jobs:
       - name: Download artifacts
         uses: actions/downlaod-artifact@v4
         with:
-          pattern: "**-${{ env.github.sha }}"
-          path: ${{ env.GITHUB_WORKSPACE }}/discord-ai
+          pattern: "**-${{ github.sha }}"
+          path: ${{ GITHUB_WORKSPACE }}/discord-ai
 
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
