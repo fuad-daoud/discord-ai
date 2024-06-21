@@ -37,7 +37,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: "discord-ai-${{ github.sha }}"
-          path: ${{ runner.workspace }}
+          path: ${{ github.workspace }}
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
         with:
