@@ -19,7 +19,7 @@ jobs:
         with:
           show-progress: true
       - name: go build
-        run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"Z
+        run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
