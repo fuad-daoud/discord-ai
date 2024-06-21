@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v4
+        with:
+          show-progress: true
       - name: go build
         run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
 
@@ -22,12 +24,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "discord-ai-${{ github.sha }}"
-          path: ${{ GITHUB_WORKSPACE }}/discord-ai
-      - name: Upload Dockerfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: "Dockerfile-${{ github.sha }}"
-          path: ${{ GITHUB_WORKSPACE }}/Dockerfile
+          path: ${{ env.GITHUB_WORKSPACE }}/discord-ai
+
 
   docker-build:
     runs-on: ubuntu-latest
@@ -36,9 +34,15 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "**-${{ github.sha }}"
-          path: ${{ GITHUB_WORKSPACE }}
-
+          pattern: "discord-ai--${{ github.sha }}"
+          path: ${{ env.GITHUB_WORKSPACE }}
+      - name: Checkout the Dockerfile
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Dockerfile
+          sparse-checkout-cone-mode: false
+          show-progress: true
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
 #  publish:
