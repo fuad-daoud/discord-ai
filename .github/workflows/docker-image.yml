@@ -76,7 +76,7 @@ jobs:
 #        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Get image name
         id: image-name
-        run: echo "IMAGE_FULL_PATH=${{ vars.IMAGE_PATH }}:$MY_TAG" >> $GITHUB_OUTPUT
+        run: echo "IMAGE_FULL_PATH=${{ vars.IMAGE_PATH }}:${{ env.MY_TAG }}" >> $GITHUB_OUTPUT
 
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
         id: docker-push-tagged
         with:
           push: true
-          tags: ${{ env.MY_TAG }}
+          tags: ${{ env.IMAGE_FULL_PATH }}
 
 
       - name: Update cloud run service
