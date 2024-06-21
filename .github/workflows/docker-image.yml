@@ -47,7 +47,7 @@ jobs:
           path: ${{ github.workspace }}
           merge-multiple: true
       - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag "$GITHUB_REPOSITORY:$GITHUB_SHA"
+        run: docker build . --file Dockerfile --tag ${"IMAGE_PATH:GITHUB_SHA"}
 
   gcloud-deploy:
     runs-on: ubuntu-latest
@@ -72,11 +72,11 @@ jobs:
           password: ${{ steps.auth.outputs.access_token }}
       - name: Get tag
         id: get-tag
-#        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
         run: echo "MY_TAG=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+#        run: echo "MY_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Get image name
         id: image-name
-        run: echo "IMAGE_FULL_PATH=${$IMAGE_PATH:$MY_TAG}" >> $GITHUB_OUTPUT
+        run: echo "IMAGE_FULL_PATH=${IMAGE_PATH:MY_TAG}" >> $GITHUB_OUTPUT
 
       - name: Checkout the Dockerfile
         uses: actions/checkout@v4
