@@ -80,7 +80,7 @@ jobs:
           env_vars: |
             TOKEN=${{ vars.LUNA_TOKEN }}
       - name: check ready status
-        run: sleep 30s && if [$(curl -LI ${{ steps.deploy.outputs.url }}/status -o /dev/null -w '%{http_code}\n' -s) == "200"]; then exit 1
+        run: echo "url at\n${{ steps.deploy.outputs.url }}"
 #  publish:
 #
 #    runs-on:
