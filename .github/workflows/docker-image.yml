@@ -98,7 +98,7 @@ jobs:
         id: docker-push-tagged
         with:
           push: true
-          tags: $IMAGE_FULL_PATH
+          tags: ${{ env.IMAGE_FULL_PATH }}
 
 
       - name: Update cloud run service
@@ -106,7 +106,7 @@ jobs:
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ vars.SERVICE }}
-          image: $IMAGE_FULL_PATH
+          image: ${{ env.IMAGE_FULL_PATH }}
           region: ${{ vars.REGION }}
 #  publish:
 #
