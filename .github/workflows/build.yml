@@ -1,4 +1,4 @@
-name: Build ${{ github.ref_name }}
+name: Build
 
 on:
   push:
