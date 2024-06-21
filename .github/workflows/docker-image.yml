@@ -62,6 +62,7 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         id: auth
         with:
+          token_format: access_token
           workload_identity_provider: 'projects/981651558497/locations/global/workloadIdentityPools/github-actions/providers/github'
           service_account: 'fuad-a-daoud-gmail-com@digitallands-project.iam.gserviceaccount.com'
           create_credentials_file: true
