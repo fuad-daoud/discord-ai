@@ -75,7 +75,6 @@ jobs:
     steps:
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
-        id: auth
         with:
           token_format: access_token
           workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
