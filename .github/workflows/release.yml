@@ -89,5 +89,8 @@ jobs:
           region: ${{ vars.REGION }}
           env_vars: |
             TOKEN=${{ vars.LUNA_TOKEN }}
+            NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }}
+            NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }}
+            NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }}
       - name: bot url
         run: echo "url at\n${{ steps.deploy.outputs.url }}"

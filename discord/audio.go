@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/voice"
+	"github.com/disgoorg/snowflake/v2"
 	"io"
 	"log/slog"
 	"os"
@@ -186,3 +188,28 @@ func changeDirAndExtension(filePath string) string {
 
 	return newFilePath
 }
+
+type updateVoiceState interface {
+	deafen(guildId *snowflake.ID, channelId *snowflake.ID) func() error
+	unDeafen(guildId *snowflake.ID, channelId *snowflake.ID) func() error
+}
+
+type updateVoiceStateImpl struct {
+	client bot.Client
+}
+
+func (ob updateVoiceStateImpl) deafen(guildId *snowflake.ID, channelId *snowflake.ID) func() error {
+	return func() error {
+		return ob.client.UpdateVoiceState(context.Background(), *guildId, channelId, false, true)
+	}
+}
+func (ob updateVoiceStateImpl) unDeafen(guildId *snowflake.ID, channelId *snowflake.ID) func() error {
+	return func() error {
+		return ob.client.UpdateVoiceState(context.Background(), *guildId, channelId, false, true)
+	}
+}
+
+type updateDeafen struct {
+}
+
+type UpdateVoiceState func(ctx context.Context, guildID snowflake.ID, channelID *snowflake.ID, selfMute bool, selfDeaf bool) error

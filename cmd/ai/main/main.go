@@ -1,20 +1,19 @@
 package main
 
 import (
-	"fmt"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/fuad-daoud/discord-ai/discord"
+	"github.com/fuad-daoud/discord-ai/http"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
 	"github.com/fuad-daoud/discord-ai/integrations/respeecher"
 	"golang.org/x/net/context"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
-	"strconv"
+	"os/signal"
 )
 
 var (
@@ -28,28 +27,8 @@ func init() {
 	//slog.SetLogLoggerLevel(slog.LevelDebug)
 }
 
-func logRequest(r *http.Request) {
-	uri := r.RequestURI
-	method := r.Method
-	fmt.Println("Got request!", method, uri)
-}
-
 func main() {
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		logRequest(r)
-		fmt.Fprintf(w, "Hello! you've requested %s\n", r.URL.Path)
-	})
-	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
-		logRequest(r)
-		codeParams, ok := r.URL.Query()["code"]
-		if ok && len(codeParams) > 0 {
-			statusCode, _ := strconv.Atoi(codeParams[0])
-			if statusCode >= 200 && statusCode < 600 {
-				w.WriteHeader(statusCode)
-			}
-		}
-	})
+	go http.SetupHttp()
 
 	deepgramClient := deepgram.MakeDefault()
 	respeecherClient := respeecher.MakeClient()
@@ -82,18 +61,9 @@ func main() {
 		panic(err)
 	}
 
-	//stop := make(chan os.Signal, 1)
-	//<-stop
-	//defer client.Close(context.TODO())
-	//guildId := snowflake.MustParse(`847908927554322432`)
-	//conn := client.VoiceManager().GetConn(guildId)
-	//defer conn.Close(context.TODO())
-
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
-		panic(err)
-	}
-
-	//signal.Notify(stop, os.Interrupt)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	<-stop
+	defer client.Close(context.TODO())
 	slog.Info("Graceful shutdown")
 }

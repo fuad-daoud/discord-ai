@@ -8,6 +8,7 @@ import (
 	"github.com/disgoorg/disgo/rest"
 	"github.com/disgoorg/disgo/voice"
 	"github.com/disgoorg/snowflake/v2"
+	"github.com/fuad-daoud/discord-ai/database"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
 	"github.com/fuad-daoud/discord-ai/integrations/gpt"
 	"github.com/fuad-daoud/discord-ai/integrations/respeecher"
@@ -74,11 +75,10 @@ func finishedCallBack(conn voice.Conn, client bot.Client, gptClient gpt.Client, 
 		}
 		go handleThread(client, channelId, selfUser.User, response)
 
-		err = Talk(conn, path, func() error {
-			return nil
-		}, func() error {
-			return client.UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
-		})
+		var updateVoice updateVoiceState = updateVoiceStateImpl{
+			client: client,
+		}
+		err = Talk(conn, path, nil, updateVoice.unDeafen(&guildId, userState.ChannelID))
 		if err != nil {
 			panic(err)
 		}
@@ -148,7 +148,6 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 					}()
 					go func() {
 						if botStateOk && botState.ChannelID.String() == userState.ChannelID.String() {
-
 							if err != nil {
 								panic(err)
 							}
@@ -171,13 +170,12 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 						panic(err)
 					}
 					go func() {
+						var updateVoice updateVoiceState = updateVoiceStateImpl{
+							client: event.Client(),
+						}
 						if botStateOk && botState.ChannelID.String() == userState.ChannelID.String() {
 							conn := event.Client().VoiceManager().GetConn(*event.GuildID)
-							err = Talk(conn, speech, func() error {
-								return event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, true)
-							}, func() error {
-								return event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, false)
-							})
+							err = Talk(conn, speech, updateVoice.deafen(event.GuildID, userState.ChannelID), updateVoice.unDeafen(event.GuildID, userState.ChannelID))
 							if err != nil {
 								panic(err)
 							}
@@ -190,11 +188,8 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 						if err != nil {
 							panic(err)
 						}
-						err = Talk(conn, speech, func() error {
-							return event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, true)
-						}, func() error {
-							return event.Client().UpdateVoiceState(context.Background(), *event.GuildID, userState.ChannelID, false, false)
-						})
+
+						err = Talk(conn, speech, updateVoice.deafen(event.GuildID, userState.ChannelID), updateVoice.unDeafen(event.GuildID, userState.ChannelID))
 						if err != nil {
 							panic(err)
 						}
@@ -213,8 +208,7 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 			}
 			gptClient := gpt.MakeClient()
 			gptThreadId := gptClient.GetThreadId()
-			//TODO: there is a wrong thread id being passed to the finished call back because its the channelId not the threadId since it was not yet created
-			// might need to change where the commands handler is being called
+
 			go CommandsHandler(event.Client(), gptClient, deepgramClient, respeecherClient)
 			detect, response := gptClient.Detect(event.Message.Content, data)
 			if !detect {
@@ -237,8 +231,28 @@ func MessageCreateHandler(deepgramClient deepgram.Client, respeecherClient respe
 func BotIsUp(r *events.Ready) {
 	user, _ := r.Client().Caches().SelfUser()
 	slog.Info("Bot is up!")
-	slog.Info("", "username", user.Username)
-	//r.Client().Rest().UpdateCurrentUserVoiceState(r.Guilds[0].ID, discord.CurrentUserVoiceStateUpdate{ChannelID: })
+	slog.Info("Bot", "username", user.Username)
+
+	client := database.GetClient()
+	for _, guild := range r.Guilds {
+		slog.Info("Merging guild", "ID", guild.ID)
+		guild, err := r.Client().Rest().GetGuild(guild.ID, false)
+		if err != nil {
+			slog.Error(err.Error())
+			panic(err)
+		}
+		slog.Info("Found guild", "name", guild.Name)
+		_, err = client.Merge(&database.Guild{
+			Id:   guild.ID.String(),
+			Name: guild.Name,
+		})
+		if err != nil {
+			slog.Error(err.Error())
+			panic(err)
+		}
+		slog.Info("Merged guild", "name", guild.Name)
+	}
+
 }
 func replyText(data gpt.MetaData, content string, client rest.Rest, process Process) {
 	processingMessage := fmt.Sprintf("%s", "Dazzling✨💫")
@@ -263,18 +277,14 @@ type Process func(message string, data gpt.MetaData) string
 
 func VoiceServerUpdateHandler(deepgramClient deepgram.Client) func(event *events.GuildVoiceStateUpdate) {
 	return func(event *events.GuildVoiceStateUpdate) {
-
 		if event.Member.User.ID == event.Client().ID() {
 			slog.Info("Update on bot voice state")
-
-			newChannelId := event.GenericGuildVoiceState.VoiceState.ChannelID.String()
-
-			if len(newChannelId) == 0 {
+			id := event.GenericGuildVoiceState.VoiceState.ChannelID
+			if id == nil {
 				slog.Info("Disconnected from voice channel")
 				deepgramClient.Stop()
+				return
 			}
-		} else {
-
 		}
 	}
 }
