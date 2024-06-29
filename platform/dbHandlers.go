@@ -101,7 +101,8 @@ func createMessageHandler(write db.Write, channel discord.Channel, guildId strin
 		cypher.MatchN("mb", member),
 		cypher.MergeN("c", textChannel),
 		cypher.CreateN("m", message),
-		cypher.Merge("(g)-[:HAS]->(c)-[:CONTAINS]->(m)-[:AUTHOR]->(mb)-[:CREATED]->(m)"))
+		cypher.Merge("(g)-[:HAS]->(c)"),
+		cypher.Merge("(c)-[:CONTAINS]->(m)-[:AUTHOR]->(mb)-[:CREATED]->(m)"))
 }
 
 func threadMessageCreateHandler(write db.Write, channel discord.Channel, member db.Member, message db.Message) {
