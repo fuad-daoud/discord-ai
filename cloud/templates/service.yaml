@@ -24,9 +24,6 @@ spec:
       containers:
       - image: {{ .Values.spec.image }}
         name: {{ .Values.metadata.name }}-{{ .Release.Revision }}
-        env:
-          - name: TOKEN
-            value: MTI1MDcyMjkwNTczNDc3ODkwNA.Ge741e.h6H-Ck4ri_JX1SNHLn8eCHC70RQFNiNCyDXmR8
         ports:
         - containerPort: {{ .Values.spec.containerPort }}
           name: http1
