@@ -49,3 +49,7 @@ export DEEPGRAM_API_KEY="b3e84a4a52bf9a59b9be90b1fe40af900adaef52"
 export OPENAI_API_KEY="sk-proj-AsgPdFnfbcgSNTBdZivIT3BlbkFJPVWizOOQqwPygX2ctH78"
 export RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 ```
+
+
+
+

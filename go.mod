@@ -8,6 +8,8 @@ require (
 	github.com/disgoorg/snowflake/v2 v2.0.1
 	github.com/forPelevin/gomoji v1.2.0
 	github.com/google/uuid v1.6.0
+	github.com/mitchellh/mapstructure v1.5.0
+	github.com/neo4j/neo4j-go-driver/v5 v5.20.0
 	golang.org/x/net v0.21.0
 )
 

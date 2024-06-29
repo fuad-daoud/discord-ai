@@ -8,8 +8,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.4-bookworm
+      image: alpine:3.20
     steps:
+      - name: install go
+        run: apk add --no-cache go
       - name: Checkout the repo
         uses: actions/checkout@v4
         with:
@@ -49,6 +51,17 @@ jobs:
         run: chmod 755 discord-ai && chmod 755 dca
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+      - name: Slim
+        uses: kitabisa/docker-slim-action@v1
+        env:
+          DSLIM_HTTP_PROBE: false
+          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
+        with:
+          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+          overwrite: true
+      - run: echo "${REPORT}"
+        env:
+          REPORT: ${{ steps.slim.outputs.report }}
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         id: auth
@@ -60,19 +73,59 @@ jobs:
       - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          registry: me-west1-docker.pkg.dev
+          registry: ${{ vars.REGION }}-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
       - name: upload
         run: docker push ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
 
+  helm:
+    runs-on: ubuntu-latest
+    container: alpine/helm:3.15.2
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cloud
+          sparse-checkout-cone-mode: false
+          show-progress: true
+      - run: helm lint cloud
+      - run: |
+          helm template cloud --output-dir cloud/rendered \
+            --set spec.metadata.location=${{ vars.REGION }} \
+            --set spec.metadata.name=${{ vars.SERVICE }} \
+            --set spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_name }} \
+            --set spec.env.TOKEN=${{ vars.LUNA_TOKEN }} \
+            --set spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
+            --set spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
+            --set spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
+
   deploy:
     runs-on: ubuntu-latest
-    needs: [docker-build-upload]
+    needs: [docker-build-upload, helm]
     permissions:
       contents: 'read'
       id-token: 'write'
     steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cloud
+          sparse-checkout-cone-mode: false
+          show-progress: true
+      - name: Helm Template
+        run: |
+          helm template cloud --output-dir cloud/rendered \
+            --set spec.metadata.location=${{ vars.REGION }} \
+            --set spec.metadata.name=${{ vars.SERVICE }} \
+            --set spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_name }} \
+            --set spec.env.TOKEN=${{ vars.LUNA_TOKEN }} \
+            --set spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
+            --set spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
+            --set spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
+
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         with:
@@ -80,14 +133,14 @@ jobs:
           workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
           service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
           create_credentials_file: true
-      - name: Update cloud run service
-        id: 'deploy'
-        uses: 'google-github-actions/deploy-cloudrun@v2'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          service: ${{ vars.SERVICE }}
-          image: ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
-          region: ${{ vars.REGION }}
-          env_vars: |
-            TOKEN=${{ vars.LUNA_TOKEN }}
-      - name: bot url
-        run: echo "url at\n${{ steps.deploy.outputs.url }}"
+          version: '>= 482.0.0'
+      - name: Deploy cloud run
+        run: gcloud run services replace cloud/rendered/cloud/templates/service.yaml --format json --region ${{ vars.REGION }}
+      - name: Make it public
+        run: gcloud run services add-iam-policy-binding ${{ vars.SERVICE }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
+#      - name: bot url
+#        run: echo "url at\n${{ steps.deploy.outputs.url }}"

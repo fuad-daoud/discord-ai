@@ -97,31 +97,42 @@ type Client interface {
 	getRecordings(secondResult []Response, recording *Response)
 }
 
-type DefaultClient struct {
+type defaultClient struct {
 	Client custom_http.Client
 }
 
-func MakeClient() Client {
+var client Client
+
+func GetClient() Client {
+	if client == nil {
+		client = makeClient()
+		return client
+	}
+	return client
+}
+
+func makeClient() Client {
 	headers := make(map[string]string)
 	headers["accept"] = "application/json"
 	headers["api-key"] = os.Getenv("RESPEECHER_API_KEY")
 	headers["Content-Type"] = "application/json"
-	var client custom_http.Client = &custom_http.DefaultClient{
+	var httpClient custom_http.Client = &custom_http.DefaultClient{
 		BaseURL: "https://gateway.respeecher.com",
 		Client:  &http.Client{},
 		Headers: headers,
 	}
 
-	return &DefaultClient{
-		Client: client,
+	client = &defaultClient{
+		Client: httpClient,
 	}
+	return client
 }
 
-func (dc *DefaultClient) DefaultTextToSpeech(text string) (string, error) {
+func (dc *defaultClient) DefaultTextToSpeech(text string) (string, error) {
 	return dc.TextToSpeech(text, OksanaDefault)
 }
 
-func (dc DefaultClient) TextToSpeech(text string, voiceParams VoiceParams) (string, error) {
+func (dc *defaultClient) TextToSpeech(text string, voiceParams VoiceParams) (string, error) {
 
 	result := dc.createTTS(text)
 
@@ -149,7 +160,7 @@ func getFilePath() string {
 	return file
 }
 
-func (dc DefaultClient) createOrder(result Response, voice VoiceParams) []Response {
+func (dc *defaultClient) createOrder(result Response, voice VoiceParams) []Response {
 	slog.Info("voice params ", "voiceParams", voice)
 	data := strings.NewReader(fmt.Sprintf(`{
   "original_id": "%s",
@@ -169,7 +180,7 @@ func (dc DefaultClient) createOrder(result Response, voice VoiceParams) []Respon
 	return secondResult
 }
 
-func (dc DefaultClient) createTTS(text string) Response {
+func (dc *defaultClient) createTTS(text string) Response {
 	text = gomoji.RemoveEmojis(text)
 	var data = strings.NewReader(fmt.Sprintf(`{
   "parent_folder_id": "%s",
@@ -182,7 +193,7 @@ func (dc DefaultClient) createTTS(text string) Response {
 	return result
 }
 
-func (dc DefaultClient) getRecording(secondResult []Response) Response {
+func (dc *defaultClient) getRecording(secondResult []Response) Response {
 	var recording Response
 	var counter = 0
 	dc.getRecordings(secondResult, &recording)
@@ -201,7 +212,7 @@ func (dc DefaultClient) getRecording(secondResult []Response) Response {
 	return recording
 }
 
-func (dc DefaultClient) getRecordings(secondResult []Response, recording *Response) {
+func (dc *defaultClient) getRecordings(secondResult []Response, recording *Response) {
 	req := dc.Client.GetRequest("/api/recordings?folder_id=dbb22f4f-6e0e-46ac-a161-eaa57f094e32&limit=50&offset=0&direction=desc")
 
 	var recordings Recordings
