@@ -49,14 +49,16 @@ jobs:
         run: chmod 755 discord-ai && chmod 755 dca
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
-#      - uses: kitabisa/docker-slim-action@v1
-#        env:
-#          DSLIM_HTTP_PROBE: false
-#          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
-#        with:
-#          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
-#          overwrite: true
-#          tag: ${{ github.ref_name }}
+      - uses: kitabisa/docker-slim-action@v1
+        env:
+          DSLIM_HTTP_PROBE: false
+          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
+        with:
+          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+          overwrite: true
+      - run: echo "${REPORT}"
+        env:
+          REPORT: ${{ steps.slim.outputs.report }}
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         id: auth
@@ -74,31 +76,31 @@ jobs:
       - name: upload
         run: docker push ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [docker-build-upload]
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-      - name: Authenticate with Google Cloud
-        uses: 'google-github-actions/auth@v2'
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
-          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-      - name: Update cloud run service
-        id: 'deploy'
-        uses: 'google-github-actions/deploy-cloudrun@v2'
-        with:
-          service: ${{ vars.SERVICE }}
-          image: ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
-          region: ${{ vars.REGION }}
-          env_vars: |
-            TOKEN=${{ vars.LUNA_TOKEN }}
-            NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }}
-            NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }}
-            NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }}
-      - name: bot url
-        run: echo "url at\n${{ steps.deploy.outputs.url }}"
+#  deploy:
+#    runs-on: ubuntu-latest
+#    needs: [docker-build-upload]
+#    permissions:
+#      contents: 'read'
+#      id-token: 'write'
+#    steps:
+#      - name: Authenticate with Google Cloud
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          token_format: access_token
+#          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
+#          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
+#          create_credentials_file: true
+#      - name: Update cloud run service
+#        id: 'deploy'
+#        uses: 'google-github-actions/deploy-cloudrun@v2'
+#        with:
+#          service: ${{ vars.SERVICE }}
+#          image: ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
+#          region: ${{ vars.REGION }}
+#          env_vars: |
+#            TOKEN=${{ vars.LUNA_TOKEN }}
+#            NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }}
+#            NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }}
+#            NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }}
+#      - name: bot url
+#        run: echo "url at\n${{ steps.deploy.outputs.url }}"
