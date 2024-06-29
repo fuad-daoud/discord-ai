@@ -1,6 +1,6 @@
 FROM alpine:3.20.1
 
-RUN apk add --no-cache ffmpeg go
+RUN apk add --no-cache ffmpeg go musl-dev
 
 ENV GOROOT /usr/lib/go
 ENV GOPATH /go
