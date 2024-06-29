@@ -51,6 +51,7 @@ jobs:
         run: chmod 755 discord-ai && chmod 755 dca
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+      - run: ls -lh
       - uses: kitabisa/docker-slim-action@v1
         env:
           DSLIM_HTTP_PROBE: false
