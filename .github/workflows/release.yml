@@ -135,11 +135,12 @@ jobs:
             --set spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
             --set spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
 
-      - name: Update cloud run service
-        id: 'deploy'
-        uses: 'google-github-actions/deploy-cloudrun@v2'
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          metadata: cloud/rendered/cloud/templates/service.yaml
-          region: ${{ vars.REGION }}
-      - name: bot url
-        run: echo "url at\n${{ steps.deploy.outputs.url }}"
+          version: '>= 482.0.0'
+      - name: Deploy cloud run
+        run: gcloud run services replace cloud/rendered/cloud/templates/service.yaml --format json --region ${{ vars.REGION }}
+
+#      - name: bot url
+#        run: echo "url at\n${{ steps.deploy.outputs.url }}"
