@@ -11,13 +11,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.4-alpine3.20
+      image: alpine:3.20
     steps:
+      - name: install go
+        run: apk add --no-cache go
       - name: Checkout the repo
         uses: actions/checkout@v4
         with:
           show-progress: true
-      - run:  apk add --no-cache musl-dev
       - name: go build
         run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
       - name: Upload binary

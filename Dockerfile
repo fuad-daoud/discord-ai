@@ -1,13 +1,6 @@
-FROM alpine:3.20.1
+FROM alpine:3.20
 
-RUN apk add --no-cache ffmpeg go musl-dev
-
-ENV GOROOT /usr/lib/go
-ENV GOPATH /go
-ENV PATH /go/bin:$PATH
-
-RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
-
+RUN apk add --no-cache go ffmpeg
 
 RUN mkdir /src
 RUN mkdir /src/files
@@ -23,8 +16,6 @@ ENV RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 ENV NEO4J_DATABASE_URL="neo4j://localhost:7687"
 ENV NEO4J_DATABASE_USER="neo4j"
 ENV NEO4J_DATABASE_PASSWORD="neo4j"
-
-
 
 WORKDIR /src
 

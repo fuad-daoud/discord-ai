@@ -8,8 +8,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.4-alpine3.20
+      image: alpine:3.20
     steps:
+      - name: install go
+        run: apk add --no-cache go
       - name: Checkout the repo
         uses: actions/checkout@v4
         with:
