@@ -1,8 +1,8 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: {{ .Values.metadata.name }}
-  namespace: {{ .Values.metadata.namespace }}
+  name: '{{ .Values.metadata.name }}'
+  namespace: '{{ .Values.metadata.namespace }}'
   annotations:
     run.googleapis.com/client-name: cloud-console
     run.googleapis.com/ingress: all
@@ -13,10 +13,10 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/maxScale: {{ .Values.spec.metadata.maxScale }}
+        autoscaling.knative.dev/maxScale: '{{ .Values.spec.metadata.maxScale }}'
         run.googleapis.com/client-name: cloud-console
         run.googleapis.com/execution-environment: {{ .Values.spec.metadata.execution_environment }}
-        run.googleapis.com/startup-cpu-boost: {{ .Values.spec.metadata.startup_cpu_boost }}
+        run.googleapis.com/startup-cpu-boost: '{{ .Values.spec.metadata.startup_cpu_boost }}'
       labels:
         run.googleapis.com/startupProbeType: Custom
     spec:

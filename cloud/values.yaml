@@ -4,7 +4,7 @@ metadata:
   location: europe-west8
 spec:
   containerConcurrency: 80
-  image: me-west1-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.0.0
+  image: europe-west8-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.1.7
   containerPort: 8080
   cpu: 1000m
   memory: 128Mi
