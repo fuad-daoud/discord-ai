@@ -115,15 +115,6 @@ jobs:
             cloud
           sparse-checkout-cone-mode: false
           show-progress: true
-      - name: Authenticate with Google Cloud
-        uses: 'google-github-actions/auth@v2'
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
-          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-
-
       - name: Helm Template
         run: |
           helm template cloud --output-dir cloud/rendered \
@@ -135,12 +126,21 @@ jobs:
             --set spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
             --set spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
 
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
+          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
           version: '>= 482.0.0'
       - name: Deploy cloud run
         run: gcloud run services replace cloud/rendered/cloud/templates/service.yaml --format json --region ${{ vars.REGION }}
-
+      - name: Make it public
+        run: gcloud run services add-iam-policy-binding ${{ vars.SERVICE }} --member="allUsers" --role="roles/run.invoker"
 #      - name: bot url
 #        run: echo "url at\n${{ steps.deploy.outputs.url }}"
