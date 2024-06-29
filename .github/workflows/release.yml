@@ -117,19 +117,21 @@ jobs:
 
 
       - name: Helm Template
-        run: helm template cloud --output-dir cloud/rendered
+        run: |
+          helm template cloud --output-dir cloud/rendered --set \
+            spec.metadata.location=${{ vars.REGION }} 
+            spec.metadata.name=${{ vars.SERVICE }}
+            spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
+            spec.env.TOKEN=${{ vars.LUNA_TOKEN }} \
+            spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
+            spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
+            spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
+
       - name: Update cloud run service
         id: 'deploy'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           metadata: cloud/rendered/cloud/templates/service.yaml
-#          service: ${{ vars.SERVICE }}
-#          image: ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
           region: ${{ vars.REGION }}
-          env_vars: |
-            TOKEN=${{ vars.LUNA_TOKEN }}
-            NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }}
-            NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }}
-            NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }}
       - name: bot url
         run: echo "url at\n${{ steps.deploy.outputs.url }}"

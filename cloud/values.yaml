@@ -9,6 +9,8 @@ spec:
   cpu: 1000m
   memory: 128Mi
   serviceAccountName: 981651558497-compute@developer.gserviceaccount.com
+  env:
+    TOKEN: "SOME_TOKEN"
   metadata:
     maxScale: '1'
     execution_environment: gen1

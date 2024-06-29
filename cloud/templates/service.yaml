@@ -24,6 +24,11 @@ spec:
       containers:
       - image: {{ .Values.spec.image }}
         name: {{ .Values.metadata.name }}-{{ .Release.Revision }}
+        env:
+          {{- range $key, $val := .Values.spec.env }}
+          - name: {{ $key }}
+            value: {{ $val }}
+          {{- end }}
         ports:
         - containerPort: {{ .Values.spec.containerPort }}
           name: http1
