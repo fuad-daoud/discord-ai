@@ -100,6 +100,13 @@ jobs:
       contents: 'read'
       id-token: 'write'
     steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cloud
+          sparse-checkout-cone-mode: false
+          show-progress: true
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         with:
@@ -108,18 +115,9 @@ jobs:
           service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
           create_credentials_file: true
 
-      - name: Checkout the repo
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            cloud
-          sparse-checkout-cone-mode: false
-          show-progress: true
-
 
       - name: Helm Template
         run: helm template cloud --output-dir cloud/rendered
-      - run: tree
       - name: Update cloud run service
         id: 'deploy'
         uses: 'google-github-actions/deploy-cloudrun@v2'
