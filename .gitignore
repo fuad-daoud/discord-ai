@@ -5,3 +5,5 @@ neo4j
 *.iml
 *.tar.gz
 .idea
+cloud/rendered
+cloud/charts

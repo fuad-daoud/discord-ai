@@ -1,0 +1,48 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: {{ .Values.metadata.name }}
+  namespace: {{ .Values.metadata.namespace }}
+  annotations:
+    run.googleapis.com/client-name: cloud-console
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+  labels:
+    cloud.googleapis.com/location: {{ .Values.metadata.location }}
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: {{ .Values.spec.metadata.maxScale }}
+        run.googleapis.com/client-name: cloud-console
+        run.googleapis.com/execution-environment: {{ .Values.spec.metadata.execution_environment }}
+        run.googleapis.com/startup-cpu-boost: {{ .Values.spec.metadata.startup_cpu_boost }}
+      labels:
+        run.googleapis.com/startupProbeType: Custom
+    spec:
+      containerConcurrency: {{ .Values.spec.containerConcurrency }}
+      containers:
+      - image: {{ .Values.spec.image }}
+        name: {{ .Values.metadata.name }}-{{ .Release.Revision }}
+        env:
+          - name: TOKEN
+            value: MTI1MDcyMjkwNTczNDc3ODkwNA.Ge741e.h6H-Ck4ri_JX1SNHLn8eCHC70RQFNiNCyDXmR8
+        ports:
+        - containerPort: {{ .Values.spec.containerPort }}
+          name: http1
+        resources:
+          limits:
+            cpu: {{ .Values.spec.cpu }}
+            memory: {{ .Values.spec.memory }}
+        startupProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: {{ .Values.spec.containerPort }}
+          periodSeconds: 10
+          timeoutSeconds: 1
+      serviceAccountName: {{ .Values.spec.serviceAccountName }}
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100

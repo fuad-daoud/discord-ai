@@ -1,0 +1,79 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: discord-ai
+  namespace: '981651558497'
+  labels:
+    cloud.googleapis.com/location: europe-central2
+  annotations:
+#    run.googleapis.com/description: DESCRIPTION
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+
+spec:
+  template:
+    metadata:
+      #TODO: pass env variable or something from github actions
+#      name: REVISION_NAME
+      name: discord-ai
+      annotations:
+        autoscaling.knative.dev/maxScale: '1'
+        autoscaling.knative.dev/minScale: '0'
+        run.googleapis.com/cpu-throttling: true
+        run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/sessionAffinity: 'false'
+#        run.googleapis.com/cloudsql-instances: CLOUD_SQL_CONNECTION
+        run.googleapis.com/execution-environment: gen1
+#        run.googleapis.com/vpc-access-connector: SERVERLESS_VPC_CONNECTOR
+#        run.googleapis.com/vpc-access-egress: EGRESS
+#        run.googleapis.com/network-interfaces: VPC_NETWORK_SETTINGS_IN_JSON
+        run.googleapis.com/encryption-key: CMEK
+#        run.googleapis.com/custom-audiences: '["AUDIENCE1","AUDIENCE2"]'
+#        run.googleapis.com/container-dependencies: CONTAINER_START_ORDER
+        run.googleapis.com/minScale: 0
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      serviceAccountName: 981651558497-compute@developer.gserviceaccount.com
+
+      containers:
+      - image: me-west1-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.0.0
+        name: discord-ai-1
+        ports:
+        - containerPort: 8080
+          name: http1
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 128Mi
+        startupProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: 8080
+          periodSeconds: 10
+          timeoutSeconds: 1
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: https://discord-ai-2ahkozmboa-lm.a.run.app
+  conditions:
+  - lastTransitionTime: '2024-06-26T13:49:22.305445Z'
+    status: 'True'
+    type: Ready
+  - lastTransitionTime: '2024-06-26T13:48:40.124553Z'
+    status: 'True'
+    type: ConfigurationsReady
+  - lastTransitionTime: '2024-06-26T13:49:22.283412Z'
+    status: 'True'
+    type: RoutesReady
+  latestCreatedRevisionName: discord-ai-00001-55m
+  latestReadyRevisionName: discord-ai-00001-55m
+  observedGeneration: 1
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: discord-ai-00001-55m
+  url: https://discord-ai-2ahkozmboa-lm.a.run.app
