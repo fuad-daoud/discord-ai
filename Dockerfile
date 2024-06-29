@@ -1,6 +1,6 @@
 FROM alpine:3.20
 
-RUN apk add --no-cache go ffmpeg
+RUN apk add --no-cache ffmpeg
 
 RUN mkdir /src
 RUN mkdir /src/files

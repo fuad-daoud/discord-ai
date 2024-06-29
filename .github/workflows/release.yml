@@ -79,24 +79,42 @@ jobs:
       - name: upload
         run: docker push ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
 
-#  deploy:
-#    runs-on: ubuntu-latest
-#    needs: [docker-build-upload]
-#    permissions:
-#      contents: 'read'
-#      id-token: 'write'
-#    steps:
-#      - name: Authenticate with Google Cloud
-#        uses: 'google-github-actions/auth@v2'
-#        with:
-#          token_format: access_token
-#          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
-#          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
-#          create_credentials_file: true
-#      - name: Update cloud run service
-#        id: 'deploy'
-#        uses: 'google-github-actions/deploy-cloudrun@v2'
-#        with:
+  helm:
+    runs-on: ubuntu-latest
+    container: alpine/helm:3.15.2
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cloud
+          sparse-checkout-cone-mode: false
+          show-progress: true
+      - run: helm lint cloud
+      - run: helm template cloud --output-dir cloud/rendered
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [docker-build-upload, helm]
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
+          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - name: Helm Template
+        run: helm template cloud --output-dir cloud/rendered
+
+      - name: Update cloud run service
+        id: 'deploy'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          metadata: cloud/rendered/templates/service.yaml
 #          service: ${{ vars.SERVICE }}
 #          image: ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
 #          region: ${{ vars.REGION }}
@@ -105,5 +123,5 @@ jobs:
 #            NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }}
 #            NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }}
 #            NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }}
-#      - name: bot url
-#        run: echo "url at\n${{ steps.deploy.outputs.url }}"
+      - name: bot url
+        run: echo "url at\n${{ steps.deploy.outputs.url }}"
