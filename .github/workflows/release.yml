@@ -124,7 +124,7 @@ jobs:
         id: 'deploy'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
-          metadata: ${{ github.workspace }}/cloud/rendered/templates/service.yaml
+          metadata: cloud/rendered/cloud/templates/service.yaml
 #          service: ${{ vars.SERVICE }}
 #          image: ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
 #          region: ${{ vars.REGION }}
