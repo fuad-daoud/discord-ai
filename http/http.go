@@ -6,8 +6,7 @@ import (
 	"strconv"
 )
 
-func SetupHttp() {
-
+func Setup() {
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/status", statusHandler)
 }

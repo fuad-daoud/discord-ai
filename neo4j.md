@@ -3,7 +3,7 @@
 for local development database use the below docker image from https://hub.docker.com/_/neo4j
 
 ```bash
-docker run --detach --publish=7474:7474 --publish=7687:7687 --volume=./neo4j/data:/data --env=NEO4J_AUTH=none --name neo4discord neo4j
+docker run --detach --publish=7474:7474 --publish=7687:7687 --volume=./neo4j/data:/data --env=NEO4J_AUTH=none --network="host" --name neo4discord-bridged neo4j
 ```
 
 ## Movie Graph Guide

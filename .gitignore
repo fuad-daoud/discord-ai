@@ -1,0 +1,7 @@
+/files/mp3/
+/files/wav/
+/files/dca/
+neo4j
+*.iml
+*.tar.gz
+.idea

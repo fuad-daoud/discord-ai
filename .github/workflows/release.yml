@@ -49,6 +49,14 @@ jobs:
         run: chmod 755 discord-ai && chmod 755 dca
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+      - uses: kitabisa/docker-slim-action@v1
+        env:
+          DSLIM_HTTP_PROBE: false
+          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
+        with:
+          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+          overwrite: true
+#          tag: ${{ github.ref_name }}
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         id: auth

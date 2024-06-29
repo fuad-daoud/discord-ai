@@ -3,6 +3,7 @@ package deepgram
 import (
 	api "github.com/deepgram/deepgram-go-sdk/pkg/api/live/v1/interfaces"
 	"log"
+	"log/slog"
 	"strings"
 )
 
@@ -18,16 +19,14 @@ func (c *MyCallback) Message(mr *api.MessageResponse) error {
 		return nil
 	}
 
-	log.Printf("Deepgram %f: %s\n\n", mr.Channel.Alternatives[0].Confidence, sentence)
-	log.Printf("Deepgram isFinal %v", mr.IsFinal)
-	log.Printf("Deepgram isSpeachFinal %v", mr.SpeechFinal)
+	slog.Info("Deepgram", "Confidence", mr.Channel.Alternatives[0].Confidence, "sentence", sentence)
+	slog.Info("Deepgram", "isFinal", mr.IsFinal)
+	slog.Info("Deepgram", "isSpeachFinal", mr.SpeechFinal)
 	c.Builder.WriteString(sentence)
 	c.sentence = sentence
 	if mr.SpeechFinal {
 		c.SpeechFinal <- mr.SpeechFinal
 	}
-	// IsFinal => finished a sentence
-	// SpeechFinal => finished this audio transcription
 	return nil
 }
 
@@ -52,22 +51,22 @@ func (c *MyCallback) UnhandledEvent(byData []byte) error {
 }
 
 func (c *MyCallback) Metadata(md *api.MetadataResponse) error {
-	log.Printf("\n[Metadata] Received\n")
-	log.Printf("Metadata.RequestID: %s\n", strings.TrimSpace(md.RequestID))
-	log.Printf("Metadata.Channels: %d\n", md.Channels)
-	log.Printf("Metadata.Created: %s\n\n", strings.TrimSpace(md.Created))
+	slog.Info("[Metadata] Received")
+	slog.Info("Metadata", "RequestID", strings.TrimSpace(md.RequestID))
+	slog.Info("Metadata", "Channels", md.Channels)
+	slog.Info("Metadata", "Created", strings.TrimSpace(md.Created))
 	return nil
 }
 
 func (c *MyCallback) UtteranceEnd(ur *api.UtteranceEndResponse) error {
-	log.Printf("\n[UtteranceEnd] Received\n")
+	slog.Info("[UtteranceEnd] Received")
 	return nil
 }
 
 func (c *MyCallback) Error(er *api.ErrorResponse) error {
-	log.Printf("\n[Error] Received\n")
-	log.Printf("Error.Type: %s\n", er.Type)
-	log.Printf("Error.Message: %s\n", er.Message)
-	log.Printf("Error.Description: %s\n\n", er.Description)
+	slog.Error("[Error] Received")
+	slog.Error("", "Type", er.Type)
+	slog.Error("", "Message", er.Message)
+	slog.Error("", "Description", er.Description)
 	return nil
 }

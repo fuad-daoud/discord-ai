@@ -6,130 +6,75 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
-type Client interface {
-	CreateThread() Thread
-	SendMessage(message string)
-	RunThread() Run
-	GetMessages() Messages
-	GetRun() *Run
-	SubmitToolOutputs(toolCallId string, output OutputTool) *Run
-	CheckDone(data MetaData)
-	SendMessageFullCycle(message string, metaData MetaData) string
-	GetThreadId() string
-	GetChanRequiredAction() chan Run
-	Detect(message string, data MetaData) (bool, string)
-}
-
 const (
-	AssistantId = "asst_X1g2Iqb5z4KHfaxmL3bBBP3I"
+	assistantId = "asst_X1g2Iqb5z4KHfaxmL3bBBP3I"
 )
 
-type defaultClient struct {
-	Thread         Thread
-	Run            Run
-	Client         custom_http.Client
-	RequiredAction chan Run
-}
+var (
+	Action     = make(chan FunctionInput)
+	Response   = make(chan FunctionOutput)
+	httpClient *custom_http.Client
+)
 
-func GetClient(threadId string) *Client {
-	return makeClient(threadId)
-}
-
-func makeClient(threadId string) *Client {
-	headers := make(map[string]string)
-	headers["Content-Type"] = "application/json"
-	headers["Authorization"] = os.ExpandEnv("Bearer $OPENAI_API_KEY")
-	headers["Openai-Beta"] = "assistants=v2"
-	var client custom_http.Client = &custom_http.DefaultClient{
-		BaseURL: "https://api.openai.com",
-		Client:  &http.Client{},
-		Headers: headers,
+func getHttpClient() custom_http.Client {
+	if httpClient == nil {
+		headers := make(map[string]string)
+		headers["Content-Type"] = "application/json; charset=utf-8"
+		headers["Authorization"] = os.ExpandEnv("Bearer $OPENAI_API_KEY")
+		headers["Openai-Beta"] = "assistants=v2"
+		var c custom_http.Client = &custom_http.DefaultClient{
+			BaseURL: "https://api.openai.com",
+			Client:  &http.Client{},
+			Headers: headers,
+		}
+		httpClient = &c
+		return c
 	}
-
-	var gptClient Client = &defaultClient{
-		Thread: Thread{
-			Id: threadId,
-		},
-		Run:            Run{},
-		Client:         client,
-		RequiredAction: make(chan Run),
-	}
-	slog.Info("got gpt client threadId", "ID", gptClient.GetThreadId())
-	return &gptClient
-}
-func MakeClient() Client {
-	headers := make(map[string]string)
-	headers["Content-Type"] = "application/json"
-	headers["Authorization"] = os.ExpandEnv("Bearer $OPENAI_API_KEY")
-	headers["Openai-Beta"] = "assistants=v2"
-	var client custom_http.Client = &custom_http.DefaultClient{
-		BaseURL: "https://api.openai.com",
-		Client:  &http.Client{},
-		Headers: headers,
-	}
-
-	var gptClient Client = &defaultClient{
-		Thread:         Thread{},
-		Run:            Run{},
-		Client:         client,
-		RequiredAction: make(chan Run),
-	}
-	gptClient.CreateThread()
-	slog.Info("created gpt client threadId", "ID", gptClient.GetThreadId())
-	return gptClient
+	return *httpClient
 }
 
-func (c *defaultClient) Detect(message string, data MetaData) (bool, string) {
-	response := c.SendMessageFullCycle("DETC:"+message, data)
-	slog.Info("got message: ", "txt", message)
-	slog.Info("on detect response: ", "txt", response)
-	if strings.ToLower(response) == "false" {
-		return false, ""
+func Detect(message, messageId, userId, threadId string) int {
+	response := SendMessageFullCycle("D:"+message, messageId, userId, threadId)
+	atoi, err := strconv.Atoi(response)
+	if err != nil {
+		slog.Warn("was not able to parse response not int", "response", response)
+		return 0
 	}
-	if strings.ToLower(response) == "maybe" {
-		return false, ""
-	}
-	return true, response
+	slog.Info("on detect response: ", "perct", atoi)
+	return atoi
 }
 
-func (c *defaultClient) GetChanRequiredAction() chan Run {
-	return c.RequiredAction
-}
-
-func (c *defaultClient) GetThreadId() string {
-	return c.Thread.Id
-}
-
-func (c *defaultClient) SendMessageFullCycle(message string, data MetaData) string {
-	slog.Info("send message got", "msg", message)
-	c.SendMessage(message)
-	c.RunThread()
-	c.CheckDone(data)
-	messages := c.GetMessages()
+func SendMessageFullCycle(message, messageId, userId, threadId string) string {
+	slog.Info("send message got", "msg", message, "messageId", messageId, "userId", userId, "threadId", threadId)
+	sendMessage(message, threadId)
+	run := runThread(messageId, userId, threadId)
+	messages := getMessages(run.ThreadId)
 	return messages.Data[0].Content[0].Text.Value
 }
-func (c *defaultClient) GetMessages() Messages {
-	req := c.Client.GetRequest(fmt.Sprintf("/v1/threads/%s/messages", c.Run.ThreadId))
+func getMessages(threadId string) Messages {
+	client := getHttpClient()
+	req := client.GetRequest(fmt.Sprintf("/v1/threads/%s/messages", threadId))
 
 	var messages Messages
-	c.Client.DoJson(req, &messages)
+	client.DoJson(req, &messages)
 	return messages
 }
 
-func (c *defaultClient) CreateThread() Thread {
-	req := c.Client.PostEmptyRequest("/v1/threads")
+func CreateThread() Thread {
+	client := getHttpClient()
+	req := client.PostEmptyRequest("/v1/threads")
 
 	var thread Thread
 
-	c.Client.DoJson(req, &thread)
-	c.Thread = thread
+	client.DoJson(req, &thread)
 	return thread
 }
-func (c *defaultClient) SubmitToolOutputs(toolCallId string, output OutputTool) *Run {
+func SubmitToolOutputs(toolCallId string, output OutputTool) *Run {
 	body := strings.NewReader(fmt.Sprintf(
 		`{
     "tool_outputs": [
@@ -139,72 +84,112 @@ func (c *defaultClient) SubmitToolOutputs(toolCallId string, output OutputTool) 
       }
     ]
   }`, toolCallId, output.Description))
-	req := c.Client.PostRequest(fmt.Sprintf("/v1/threads/%s/runs/%s/submit_tool_outputs", c.Run.ThreadId, c.Run.Id), body)
+	client := getHttpClient()
+	req := client.PostRequest(fmt.Sprintf("/v1/threads/%s/runs/%s/submit_tool_outputs", output.ThreadId, output.Id), body)
 
 	var run Run
 
-	c.Client.DoJson(req, &run)
-	c.Run = run
-	c.Thread.Id = run.ThreadId
+	client.DoJson(req, &run)
+
 	return &run
 }
 
-func (c *defaultClient) SendMessage(message string) {
+func sendMessage(message string, threadId string) {
 	body := strings.NewReader(fmt.Sprintf(
 		`{
       "role": "user",
       "content": "%s"
     }`, message))
-	req := c.Client.PostRequest(fmt.Sprintf("/v1/threads/%s/messages", c.Thread.Id), body)
-	var not_used any
-	c.Client.DoJson(req, &not_used)
+	client := getHttpClient()
+	req := client.PostRequest(fmt.Sprintf("/v1/threads/%s/messages", threadId), body)
+	client.Do(req)
 }
 
-func (c *defaultClient) RunThread() Run {
+func runThread(messageId, userId, threadId string) Run {
 	body := strings.NewReader(fmt.Sprintf(
 		`{
     "assistant_id": "%s"
-  }`, AssistantId))
-	req := c.Client.PostRequest(fmt.Sprintf("/v1/threads/%s/runs", c.Thread.Id), body)
+  }`, assistantId))
+	client := getHttpClient()
+	req := client.PostRequest(fmt.Sprintf("/v1/threads/%s/runs", threadId), body)
 
 	var run Run
-	c.Client.DoJson(req, &run)
-	c.Run = run
-	c.Thread.Id = run.ThreadId
+	client.DoJson(req, &run)
+	waitTillDone(run, messageId, userId)
 	return run
 }
 
-func (c *defaultClient) CheckDone(data MetaData) {
+func waitTillDone(run Run, messageId, userId string) {
 	for {
-		status := c.Run.Status
+		status := run.Status
 		slog.Info("run status ", "status", status)
 		if status == "completed" {
 			break
 		}
 		//queued, in_progress, requires_action, cancelling, cancelled, failed, completed, incomplete, or expired
 		if status == "requires_action" {
-			c.Run.MetaData = data
-			c.RequiredAction <- c.Run
+			toolCalls := run.RequiredAction.SubmitToolOutputs.ToolCalls[0]
+			Action <- FunctionInput{
+				Function:  toolCalls.Function,
+				UserId:    userId,
+				MessageId: messageId,
+			}
 			select {
-			case newRun := <-c.RequiredAction:
-				c.Run = newRun
-				status = c.Run.Status
+			case response := <-Response:
+
+				tool := OutputTool{
+					FunctionOutput: response,
+					Id:             run.Id,
+					ThreadId:       run.ThreadId,
+				}
+
+				run := SubmitToolOutputs(toolCalls.Id, tool)
+				status = run.Status
 			}
 		}
 		if status == "cancelled" || status == "failed" || status == "expired" || status == "cancelling" {
-			slog.Error("stats run is not valid can't complete status:", status)
+			slog.Error("stats run is not valid can't complete", "status", status)
+			break
 		}
 
 		time.Sleep(100 * time.Millisecond)
-		c.GetRun()
+		run = *getRun(run.ThreadId, run.Id)
 	}
 }
 
-func (c *defaultClient) GetRun() *Run {
-	req := c.Client.GetRequest(fmt.Sprintf("/v1/threads/%s/runs/%s", c.Run.ThreadId, c.Run.Id))
+func getRun(threadId string, runId string) *Run {
+	client := getHttpClient()
+	req := client.GetRequest(fmt.Sprintf("/v1/threads/%s/runs/%s", threadId, runId))
+	var run Run
+	client.DoJson(req, &run)
+	return &run
+}
 
-	c.Client.DoJson(req, &c.Run)
-	return &c.Run
+func CancelRunsForThread(threadId string) {
+	runs := listRuns(threadId)
+	for _, run := range runs.Data {
+		if run.Status == "queued" || run.Status == "in_progress" || run.Status == "requires_action" || run.Status == "incomplete" {
+			cancelRun(threadId, run.Id)
+		}
+	}
+}
+
+func cancelRun(threadId string, runId string) {
+	client := getHttpClient()
+	request := client.PostEmptyRequest(fmt.Sprintf("/v1/threads/%s/runs/%s/cancel", threadId, runId))
+	var run Run
+	client.DoJson(request, &run)
+	slog.Info("cancel run ", "threadId", threadId, "runId", runId, "status", run.Status)
+}
+
+func listRuns(threadId string) Runs {
+	client := getHttpClient()
+
+	req := client.GetRequest(fmt.Sprintf("/v1/threads/%s/runs", threadId))
+
+	var runs Runs
+	client.DoJson(req, &runs)
+	return runs
 }
 
 type Thread struct {
@@ -225,6 +210,10 @@ type Messages struct {
 	} `json:"data"`
 }
 
+type Runs struct {
+	Data []Run
+}
+
 type Run struct {
 	Id             string `json:"id"`
 	Status         string `json:"status"`
@@ -233,11 +222,9 @@ type Run struct {
 		Type              string `json:"type"`
 		SubmitToolOutputs struct {
 			ToolCalls []struct {
-				Id       string `json:"id"`
-				Type     string `json:"type"`
-				Function struct {
-					Name string `json:"name"`
-				} `json:"function"`
+				Id       string   `json:"id"`
+				Type     string   `json:"type"`
+				Function Function `json:"function"`
 			} `json:"tool_calls"`
 		} `json:"submit_tool_outputs"`
 	} `json:"required_action"`
@@ -249,7 +236,24 @@ type MetaData struct {
 	ChannelId string `json:"channel_id"`
 }
 
-type OutputTool struct {
-	Success     string `json:"success"`
+type Function struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+type FunctionInput struct {
+	Function
+	UserId    string
+	MessageId string
+}
+
+type FunctionOutput struct {
+	Success     bool   `json:"success"`
 	Description string `json:"description"`
+}
+
+type OutputTool struct {
+	FunctionOutput
+	Id       string `json:"id"`
+	ThreadId string `json:"run_id"`
 }

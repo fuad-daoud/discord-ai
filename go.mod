@@ -8,6 +8,8 @@ require (
 	github.com/disgoorg/snowflake/v2 v2.0.1
 	github.com/forPelevin/gomoji v1.2.0
 	github.com/google/uuid v1.6.0
+	github.com/mitchellh/mapstructure v1.5.0
+	github.com/neo4j/neo4j-go-driver/v5 v5.20.0
 	golang.org/x/net v0.21.0
 )
 
@@ -21,7 +23,6 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
-	github.com/neo4j/neo4j-go-driver/v5 v5.20.0 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/sasha-s/go-csync v0.0.0-20240107134140-fcbab37b09ad // indirect
 	golang.org/x/crypto v0.19.0 // indirect
