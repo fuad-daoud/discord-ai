@@ -119,12 +119,12 @@ jobs:
 
       - name: Helm Template
         run: helm template cloud --output-dir cloud/rendered
-
+      - run: tree
       - name: Update cloud run service
         id: 'deploy'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
-          metadata: cloud/rendered/templates/service.yaml
+          metadata: ${{ github.workspace }}/cloud/rendered/templates/service.yaml
 #          service: ${{ vars.SERVICE }}
 #          image: ${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
 #          region: ${{ vars.REGION }}
