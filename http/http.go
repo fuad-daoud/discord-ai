@@ -2,6 +2,7 @@ package http
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 )
@@ -9,6 +10,11 @@ import (
 func Setup() {
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/status", statusHandler)
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		slog.Error("Could not serve on 8080")
+		panic(err)
+	}
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {

@@ -14,6 +14,7 @@ spec:
     metadata:
       annotations:
         autoscaling.knative.dev/maxScale: '{{ .Values.spec.metadata.maxScale }}'
+        autoscaling.knative.dev/minScale: '{{ .Values.spec.metadata.minScale }}'
         run.googleapis.com/client-name: cloud-console
         run.googleapis.com/execution-environment: {{ .Values.spec.metadata.execution_environment }}
         run.googleapis.com/startup-cpu-boost: '{{ .Values.spec.metadata.startup_cpu_boost }}'

@@ -13,5 +13,6 @@ spec:
     TOKEN: "SOME_TOKEN"
   metadata:
     maxScale: '1'
+    minScale: '1'
     execution_environment: gen1
     startup_cpu_boost: 'true'
