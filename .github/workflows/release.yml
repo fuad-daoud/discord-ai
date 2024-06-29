@@ -119,9 +119,9 @@ jobs:
       - name: Helm Template
         run: |
           helm template cloud --output-dir cloud/rendered --set \
-            spec.metadata.location=${{ vars.REGION }} 
-            spec.metadata.name=${{ vars.SERVICE }}
-            spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_name }}
+            spec.metadata.location=${{ vars.REGION }} \
+            spec.metadata.name=${{ vars.SERVICE }} \
+            spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_name }} \
             spec.env.TOKEN=${{ vars.LUNA_TOKEN }} \
             spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
             spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
