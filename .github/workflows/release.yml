@@ -141,6 +141,6 @@ jobs:
       - name: Deploy cloud run
         run: gcloud run services replace cloud/rendered/cloud/templates/service.yaml --format json --region ${{ vars.REGION }}
       - name: Make it public
-        run: gcloud run services add-iam-policy-binding ${{ vars.SERVICE }} --member="allUsers" --role="roles/run.invoker"
+        run: gcloud run services add-iam-policy-binding ${{ vars.SERVICE }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
 #      - name: bot url
 #        run: echo "url at\n${{ steps.deploy.outputs.url }}"
