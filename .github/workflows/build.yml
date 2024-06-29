@@ -52,13 +52,13 @@ jobs:
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
       - run: ls -lh
-      - uses: kitabisa/docker-slim-action@v1
-        env:
-          DSLIM_HTTP_PROBE: false
-          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
-        with:
-          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
-          overwrite: true
+#      - uses: kitabisa/docker-slim-action@v1
+#        env:
+#          DSLIM_HTTP_PROBE: false
+#          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
+#        with:
+#          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
+#          overwrite: true
       #          tag: ${{ github.ref_name }}
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
@@ -71,7 +71,7 @@ jobs:
       - name: Login to Artifact Registry
         uses: docker/login-action@v3
         with:
-          registry: europe-west8-docker.pkg.dev
+          registry: ${{ vars.REGION }}-docker.pkg.dev
           username: oauth2accesstokend
           password: ${{ steps.auth.outputs.access_token }}
       - name: upload
