@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           show-progress: true
+      - run:  apk add --no-cache musl-dev
       - name: go build
         run: go build -o "$GITHUB_WORKSPACE/discord-ai" "$GITHUB_WORKSPACE/cmd/ai/main/main.go"
       - name: Upload binary
