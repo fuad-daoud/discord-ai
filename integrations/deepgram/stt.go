@@ -9,13 +9,6 @@ import (
 	"strings"
 )
 
-type Client interface {
-	Write(p []byte, SSRC uint32, finishedCallback FinishedCallBack)
-	StopSSRC(SSRC uint32)
-	Stop()
-	MapSSRC(SSRC int, userId string)
-}
-
 var (
 	clients              = make(map[string]*deepgramLive.Client)
 	silentPacketsCounter = make(map[string]int)

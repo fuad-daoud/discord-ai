@@ -11,10 +11,6 @@ import (
 	"time"
 )
 
-const (
-	assistantId = "asst_X1g2Iqb5z4KHfaxmL3bBBP3I"
-)
-
 var (
 	Action     = make(chan FunctionInput)
 	Response   = make(chan FunctionOutput)
@@ -109,7 +105,7 @@ func runThread(messageId, userId, threadId string) Run {
 	body := strings.NewReader(fmt.Sprintf(
 		`{
     "assistant_id": "%s"
-  }`, assistantId))
+  }`, os.Getenv("GPT_ASSISTANT")))
 	client := getHttpClient()
 	req := client.PostRequest(fmt.Sprintf("/v1/threads/%s/runs", threadId), body)
 
