@@ -73,7 +73,7 @@ jobs:
       - name: Upload service yaml
         uses: actions/upload-artifact@v4
         with:
-          name: "service-${{ contains(github.ref, 'release') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}.yaml"
+          name: "service-${{ contains(github.ref, 'release') && github.ref_name || github.sha }}.yaml"
           path: ${{ github.workspace }}/cloud/rendered/cloud/templates/service.yaml
           retention-days: 1
           if-no-files-found: error
