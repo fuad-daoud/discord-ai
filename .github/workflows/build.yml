@@ -105,3 +105,9 @@ jobs:
         run: gcloud run services replace service.yaml --format json --region ${{ vars.REGION }}
       - name: Make it public
         run: gcloud run services add-iam-policy-binding ${{ contains(github.ref_type, 'tag') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
+      - name: Wait 30 seconds
+        run: sleep 30s
+      - name: Run curl
+        run: curl --fail $(gcloud run services describe ${{ contains(github.ref_type, 'tag') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --format json --region europe-west8 | jq -c -e -j .status.url)
+      - name: Remove service
+        run: gcloud run services delete ${{ contains(github.ref_type, 'tag') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --region ${{ vars.REGION }}
