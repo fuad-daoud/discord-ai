@@ -25,9 +25,6 @@ jobs:
         with:
           target: "${{ vars.IMAGE_PATH }}:${{ github.ref_name }}"
           overwrite: true
-      - run: echo "${REPORT}"
-        env:
-          REPORT: ${{ steps.slim.outputs.report }}
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         id: auth
@@ -103,5 +100,3 @@ jobs:
         run: gcloud run services replace cloud/rendered/cloud/templates/service.yaml --format json --region ${{ vars.REGION }}
       - name: Make it public
         run: gcloud run services add-iam-policy-binding ${{ vars.SERVICE }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
-#      - name: bot url
-#        run: echo "url at\n${{ steps.deploy.outputs.url }}"

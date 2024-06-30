@@ -25,9 +25,6 @@ jobs:
         with:
           target: "${{ vars.IMAGE_PATH }}:${{ github.sha }}"
           overwrite: true
-      - run: echo "${REPORT}"
-        env:
-          REPORT: ${{ steps.slim.outputs.report }}
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         id: auth
@@ -55,5 +52,7 @@ jobs:
             cloud
           sparse-checkout-cone-mode: false
           show-progress: true
-      - run: helm lint cloud
-      - run: helm template cloud --output-dir cloud/rendered
+      - name: Linting
+        run: helm lint cloud
+      - name: Templating
+        run: helm template cloud --output-dir cloud/rendered
