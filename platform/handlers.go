@@ -10,7 +10,6 @@ import (
 	"github.com/fuad-daoud/discord-ai/db/cypher"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
 	"github.com/fuad-daoud/discord-ai/integrations/gpt"
-	"github.com/fuad-daoud/discord-ai/integrations/respeecher"
 	"golang.org/x/net/context"
 	"log/slog"
 	"time"
@@ -25,7 +24,7 @@ func handleDeepgramVoicePackets(conn voice.Conn, messageId string) {
 	Cache().VoiceStatesForEach(guildID, func(state discord.VoiceState) {
 		Cache().VoiceStatesForEach(guildID, func(state discord.VoiceState) {
 			if state.ChannelID == conn.ChannelID() {
-				deepgram.MakeClient(state.UserID.String(), finishedCallBack(guildID, thread))
+				deepgram.MakeClient(state.UserID.String(), finishedCallBack(conn, guildID, thread))
 			}
 		})
 	})
@@ -43,12 +42,12 @@ func handleDeepgramVoicePackets(conn voice.Conn, messageId string) {
 			continue
 		}
 		userId := conn.UserIDBySSRC(packet.SSRC)
-		deepgram.MakeClient(userId.String(), finishedCallBack(guildID, thread))
+		deepgram.MakeClient(userId.String(), finishedCallBack(conn, guildID, thread))
 		deepgram.Write(packet.Opus, userId.String())
 	}
 }
 
-func finishedCallBack(guildId snowflake.ID, thread db.TextChannel) deepgram.FinishedCallBack {
+func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChannel) deepgram.FinishedCallBack {
 
 	return func(message string, userId string) {
 		slog.Info("finished call back starting ...", "userId", userId)
@@ -58,7 +57,7 @@ func finishedCallBack(guildId snowflake.ID, thread db.TextChannel) deepgram.Fini
 			slog.Error("could not get user: ", userId, err)
 		}
 		perct := gpt.Detect(message, "", userId, thread.Name)
-		if perct < 97 {
+		if perct < 95 {
 			return
 		}
 
@@ -76,20 +75,20 @@ func finishedCallBack(guildId snowflake.ID, thread db.TextChannel) deepgram.Fini
 
 		response := gpt.SendMessageFullCycle(message, "", userId, thread.Name)
 
-		//path, err := respeecher.GetClient().DefaultTextToSpeech("response")
-		//if err != nil {
-		//	panic(err)
-		//}
+		path, err := deepgram.TTS(response)
+		if err != nil {
+			panic(err)
+		}
 		selfUser, b := Cache().SelfUser()
 		if !b {
 			slog.Error("could not get self user")
 		}
 		go handleThread(thread.Id, selfUser.User, response)
 
-		//err = Talk(conn, path, nil, unDeafen(&guildId, userState.ChannelID))
-		//if err != nil {
-		//	panic(err)
-		//}
+		err = Talk(conn, path, func() error { return nil }, unDeafen(&guildId, userState.ChannelID))
+		if err != nil {
+			panic(err)
+		}
 		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
 		if err != nil {
 			slog.Error("could not update voice state: ", err)
@@ -158,12 +157,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 				}
 
 				response := gpt.SendMessageFullCycle(message+"(respond like you are whispering)", event.MessageID.String(), authorId.String(), thread.Name())
-				respeecherClient := respeecher.GetClient()
-				speech, err := respeecherClient.TextToSpeech(response, respeecher.VoiceParams{
-					Id:     respeecher.OksanaDefault.Id,
-					Accent: respeecher.OksanaDefault.Accent,
-					Style:  respeecher.Oksana.Styles["HushedRaspy"],
-				})
+				speech, err := deepgram.TTS(response)
 				if err != nil {
 					slog.Error("Failed to send speech", "err", err)
 					panic(err)
@@ -197,7 +191,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 		}
 		replyText(thread.ID(), event.Message.Content, event.MessageID.String(), authorId.String(), thread.Name(), process)
 	} else {
-		if channel.ID().String() != "1252273230727876619" && channel.ID().String() != "1252536839886082109" {
+		if channel.ID().String() != "1252273230727876619" && channel.ID().String() != "1252536839886082109" && channel.ID().String() != "1256856679379636276" {
 			return
 		}
 
