@@ -59,8 +59,8 @@ jobs:
       - name: Templating
         run: |
           helm template cloud --output-dir cloud/rendered \
-            --set spec.metadata.location=${{ vars.REGION }} \
-            --set spec.metadata.name=${{ contains(github.ref_type, 'tag') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
+            --set metadata.location=${{ vars.REGION }} \
+            --set metadata.name=${{ contains(github.ref_type, 'tag') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
             --set spec.image=${{ vars.IMAGE_PATH }}:${{ contains(github.ref_type, 'tag') && github.ref_name || github.sha }} \
             --set spec.env.TOKEN=${{ vars.LUNA_TOKEN }} \
             --set spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
@@ -104,4 +104,4 @@ jobs:
       - name: Deploy cloud run
         run: gcloud run services replace service.yaml --format json --region ${{ vars.REGION }}
       - name: Make it public
-        run: gcloud run services add-iam-policy-binding ${{ contains(github.ref_type, 'tag') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name)  }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
+        run: gcloud run services add-iam-policy-binding ${{ contains(github.ref_type, 'tag') && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
