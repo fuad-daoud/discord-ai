@@ -50,6 +50,7 @@ func SendMessageFullCycle(message, messageId, userId, threadId string) string {
 	sendMessage(message, threadId)
 	run := runThread(messageId, userId, threadId)
 	messages := getMessages(run.ThreadId)
+	slog.Info("Assistant replied", "message", messages.Data[0].Content[0].Text.Value)
 	return messages.Data[0].Content[0].Text.Value
 }
 func getMessages(threadId string) Messages {

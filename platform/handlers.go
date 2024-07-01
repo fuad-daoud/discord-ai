@@ -57,7 +57,7 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 			slog.Error("could not get user: ", userId, err)
 		}
 		perct := gpt.Detect(message, "", userId, thread.Name)
-		if perct < 95 {
+		if perct < 80 {
 			return
 		}
 
@@ -75,20 +75,22 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 
 		response := gpt.SendMessageFullCycle(message, "", userId, thread.Name)
 
-		path, err := deepgram.TTS(response)
+		voiceReader, err := deepgram.TTS(response)
 		if err != nil {
 			panic(err)
 		}
+
 		selfUser, b := Cache().SelfUser()
 		if !b {
 			slog.Error("could not get self user")
 		}
 		go handleThread(thread.Id, selfUser.User, response)
 
-		err = Talk(conn, path, func() error { return nil }, unDeafen(&guildId, userState.ChannelID))
+		err = Talk(conn, voiceReader, func() error { return nil }, unDeafen(&guildId, userState.ChannelID))
 		if err != nil {
 			panic(err)
 		}
+		defer voiceReader.Close()
 		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
 		if err != nil {
 			slog.Error("could not update voice state: ", err)
@@ -198,7 +200,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 		gptThread := gpt.CreateThread()
 
 		perct := gpt.Detect(event.Message.Content, event.MessageID.String(), authorId.String(), gptThread.Id)
-		if perct < 97 {
+		if perct < 80 {
 			return
 		}
 

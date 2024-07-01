@@ -18,8 +18,11 @@ func JoinFunction(input gpt.FunctionInput) {
 
 	voiceState, b := Cache().VoiceState(guildId, userId)
 	if !b {
-		slog.Error("could not get voice state")
-		panic("could not get voice state")
+		gpt.Response <- gpt.FunctionOutput{
+			Success:     false,
+			Description: "you are not in a voice channel stupid",
+		}
+		return
 	}
 
 	botState, botStateOk := Cache().VoiceState(guildId, Client().ApplicationID())
@@ -61,17 +64,8 @@ func JoinFunction(input gpt.FunctionInput) {
 	}
 	slog.Info("wrote silent frame successfully")
 
-	//guildId := snowflake.MustParse(`847908927554322432`)
+	slog.Info("starting playback")
 
-	//slog.Info("starting playback")
-	//err := Talk(conn, "files/fixed-replies/hey-luna-is-here-oksana.wav", func() error {
-	//	return client.UpdateVoiceState(context.Background(), guildId, channelId, false, true)
-	//}, func() error {
-	//	return client.UpdateVoiceState(context.Background(), guildId, channelId, false, false)
-	//})
-	//if err != nil {
-	//	slog.Info("error talking to voice channel:", "err", err)
-	//}
 	go handleDeepgramVoicePackets(conn, input.MessageId)
 
 	gpt.Response <- gpt.FunctionOutput{

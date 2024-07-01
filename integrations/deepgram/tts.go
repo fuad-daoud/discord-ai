@@ -1,31 +1,35 @@
 package deepgram
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/forPelevin/gomoji"
 	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 )
 
 const (
-	filePath string = "files/output.mp3"
-	model           = "aura-luna-en"
-	encoding        = "mp3"
+	model     = "aura-luna-en"
+	encoding  = "opus"
+	container = "ogg"
 )
 
-func TTS(textToSpeech string) (string, error) {
-	url := fmt.Sprintf("https://api.deepgram.com/v1/speak?model=%s&&encoding=%s", model, encoding)
+func TTS(textToSpeech string) (io.ReadCloser, error) {
+	textToSpeech = gomoji.RemoveEmojis("..." + textToSpeech)
+	url := fmt.Sprintf("https://api.deepgram.com/v1/speak?model=%s&&encoding=%s&&container=%s", model, encoding, container)
 	apiKey := os.Getenv("DEEPGRAM_API_KEY")
-	payload := strings.NewReader(`{
-				"text": "` + textToSpeech + `"
-				}`)
+	payload, _ := json.Marshal(struct {
+		Text string `json:"text"`
+	}{
+		Text: textToSpeech,
+	})
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, payload)
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(payload)))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Set("Authorization", "Token "+apiKey)
@@ -33,25 +37,12 @@ func TTS(textToSpeech string) (string, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", err
+		return nil, fmt.Errorf("got HTTP status code %d", resp.StatusCode)
 	}
 
-	outputFile, err := os.Create(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer outputFile.Close()
-
-	_, err = io.Copy(outputFile, resp.Body)
-	if err != nil {
-		return "", err
-
-	}
-	slog.Info("File saved successfully.")
-	return filePath, nil
+	return resp.Body, nil
 }

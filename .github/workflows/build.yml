@@ -110,5 +110,5 @@ jobs:
       - name: Run curl
         run: curl --fail $(gcloud run services describe ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --format json --region europe-west8 | jq -c -e -j .status.url)
       - name: Remove service
-        if: github.ref_type == 'tag'
+        if: github.ref_type != 'tag'
         run: gcloud run services delete ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --region ${{ vars.REGION }} --quiet
