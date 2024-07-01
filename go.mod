@@ -7,9 +7,9 @@ require (
 	github.com/disgoorg/disgo v0.18.7
 	github.com/disgoorg/snowflake/v2 v2.0.1
 	github.com/forPelevin/gomoji v1.2.0
+	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/neo4j/neo4j-go-driver/v5 v5.20.0
-	github.com/pion/opus v0.0.0-20240409032234-867e82f70014
 	golang.org/x/net v0.21.0
 )
 
