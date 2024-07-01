@@ -16,6 +16,7 @@ RUN mkdir /src/files
 RUN mkdir /src/files/wav
 
 COPY --from=build /workspace/discord-ai /src
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 WORKDIR /src
 
