@@ -1,21 +1,22 @@
-FROM alpine:3.20
+FROM golang:1.22.4-bullseye as build
 
-RUN apk add --no-cache ffmpeg
+ADD . /workspace
+
+WORKDIR /workspace
+
+RUN go mod download
+RUN go build -o "./discord-ai" "./cmd/ai/main/main.go"
+
+
+FROM debian:bullseye-slim
+
 
 RUN mkdir /src
 RUN mkdir /src/files
 RUN mkdir /src/files/wav
 
-ADD discord-ai /src
-ADD dca /src
-
-ENV TOKEN="MTI1MzI4NjI0MzY4NTYzMDAyNA.G6aw13.X4Vg9L9BfRWkNJcVgSbcLnqe_GbKoydkhJ9krw"
-ENV DEEPGRAM_API_KEY="b3e84a4a52bf9a59b9be90b1fe40af900adaef52"
-ENV OPENAI_API_KEY="sk-proj-AsgPdFnfbcgSNTBdZivIT3BlbkFJPVWizOOQqwPygX2ctH78"
-ENV RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
-ENV NEO4J_DATABASE_URL="neo4j://localhost:7687"
-ENV NEO4J_DATABASE_USER="neo4j"
-ENV NEO4J_DATABASE_PASSWORD="neo4j"
+COPY --from=build /workspace/discord-ai /src
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 WORKDIR /src
 

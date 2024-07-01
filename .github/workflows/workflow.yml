@@ -1,0 +1,115 @@
+name: build-deploy
+
+on:
+  push:
+    branches: [ "*" ]
+  create:
+    tags: [ "*" ]
+
+jobs:
+  docker-build-upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout the Dockerfile
+        uses: actions/checkout@v4
+        with:
+          show-progress: true
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+      - name: Slim
+        uses: kitabisa/docker-slim-action@v1
+        env:
+          DSLIM_HTTP_PROBE: false
+          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
+          DSLIM_INCLUDE_PATH: "/etc/ssl/certs/"
+        with:
+          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+          overwrite: true
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
+          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      - name: upload
+        run: docker push ${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+  helm:
+    runs-on: ubuntu-latest
+    container: alpine/helm:3.15.2
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cloud
+          sparse-checkout-cone-mode: false
+          show-progress: true
+      - name: Linting
+        run: helm lint cloud
+      - name: Templating
+        run: |
+          helm template cloud --output-dir cloud/rendered \
+            --set metadata.location=${{ vars.REGION }} \
+            --set metadata.name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
+            --set spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }} \
+            --set spec.env.TOKEN=${{ vars.LUNA_TOKEN }} \
+            --set spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
+            --set spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
+            --set spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
+            --set spec.env.CLIENT_ID=${{ vars.CLIENT_ID }} \
+            --set spec.env.CLIENT_SECRET=${{ vars.CLIENT_SECRET }} \
+            --set spec.env.DEEPGRAM_API_KEY=${{ vars.DEEPGRAM_API_KEY }} \
+            --set spec.env.OPENAI_API_KEY=${{ vars.OPENAI_API_KEY }} \
+      - name: Upload service yaml
+        uses: actions/upload-artifact@v4
+        with:
+          name: "service-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}.yaml"
+          path: ${{ github.workspace }}/cloud/rendered/cloud/templates/service.yaml
+          retention-days: 1
+          if-no-files-found: error
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [ docker-build-upload, helm ]
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "service-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}.yaml"
+          path: ${{ github.workspace }}
+          merge-multiple: true
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
+          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 482.0.0'
+      - name: Deploy cloud run
+        run: gcloud run services replace service.yaml --format json --region ${{ vars.REGION }}
+      - name: Make it public
+        run: gcloud run services add-iam-policy-binding ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
+      - name: Wait 30 seconds
+        run: sleep 30s
+      - name: Run curl
+        run: curl --fail $(gcloud run services describe ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --format json --region europe-west8 | jq -c -e -j .status.url)
+      - name: Remove service
+        if: github.ref_type != 'tag'
+        run: gcloud run services delete ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --region ${{ vars.REGION }} --quiet

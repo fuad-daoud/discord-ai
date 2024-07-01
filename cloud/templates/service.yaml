@@ -28,7 +28,7 @@ spec:
         env:
           {{- range $key, $val := .Values.spec.env }}
           - name: {{ $key }}
-            value: {{ $val }}
+            value: '{{ $val }}'
           {{- end }}
         ports:
         - containerPort: {{ .Values.spec.containerPort }}
