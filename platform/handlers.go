@@ -85,12 +85,9 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 			slog.Error("could not get self user")
 		}
 		go handleThread(thread.Id, selfUser.User, response)
-
-		err = Talk(conn, voiceReader, func() error { return nil }, unDeafen(&guildId, userState.ChannelID))
-		if err != nil {
-			panic(err)
-		}
-		defer voiceReader.Close()
+		conn.SetOpusFrameProvider(&AudioProvider{
+			source: voiceReader,
+		})
 		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
 		if err != nil {
 			slog.Error("could not update voice state: ", err)
@@ -159,18 +156,16 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 				}
 
 				response := gpt.SendMessageFullCycle(message+"(respond like you are whispering)", event.MessageID.String(), authorId.String(), thread.Name())
-				speech, err := deepgram.TTS(response)
+				voiceReader, err := deepgram.TTS(response)
 				if err != nil {
 					slog.Error("Failed to send speech", "err", err)
 					panic(err)
 				}
 				if botStateOk {
 					conn := event.Client().VoiceManager().GetConn(event.GuildID)
-					err = Talk(conn, speech, deafen(&event.GuildID, botState.ChannelID), unDeafen(&event.GuildID, botState.ChannelID))
-					if err != nil {
-						slog.Error("Failed to talk to voice channel", "guild", event.GuildID, "channel", event.ChannelID)
-						panic(err)
-					}
+					conn.SetOpusFrameProvider(&AudioProvider{
+						source: voiceReader,
+					})
 					return response
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -181,11 +176,9 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 					slog.Error("Failed to open voice channel", "channel", event.GuildID, "error", err)
 					panic(err)
 				}
-				err = Talk(conn, speech, deafen(&event.GuildID, botState.ChannelID), unDeafen(&event.GuildID, botState.ChannelID))
-				if err != nil {
-					slog.Error("Failed to talk to voice channel", "channel", event.GuildID, "error", err)
-					panic(err)
-				}
+				conn.SetOpusFrameProvider(&AudioProvider{
+					source: voiceReader,
+				})
 				return response
 			}
 		} else {
