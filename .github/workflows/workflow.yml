@@ -1,4 +1,4 @@
-name: Build
+name: build-deploy
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
           DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
           DSLIM_INCLUDE_PATH: "/etc/ssl/certs/"
         with:
-          target: "${{ vars.IMAGE_PATH }}:${{ github.sha }}"
+          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
           overwrite: true
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
