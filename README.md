@@ -1,7 +1,8 @@
-[![Build](https://github.com/fuad-daoud/discord-ai/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/fuad-daoud/discord-ai/actions/workflows/build.yml)
-[![Release](https://github.com/fuad-daoud/discord-ai/actions/workflows/release.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/release.yml)
+[![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg?branch=main)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
+[![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
+[![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
 
-![pixlr-image-generator-9f541022-7289-4425-b761-f4194196df8d.png](..%2F..%2FDownloads%2Fluna%2Fpixlr-image-generator-9f541022-7289-4425-b761-f4194196df8d.png)
+![f4194196df8d.png](./assets/f4194196df8d.png)
 
 docker container `ubuntu:22.04`
 
