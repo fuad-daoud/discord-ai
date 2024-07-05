@@ -210,10 +210,6 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 			slog.Error("could not create discord thread", err.Error())
 			panic(err)
 		}
-		slog.Info("Created discord thread with gpt id as name", "name", newThread.Name(), "id", newThread.ID())
-
-		//response := cohere.Send(event.Message.Content, event.MessageID.String(), authorId.String(), newThread.ID().String())
-		//response := gpt.SendMessageFullCycle(event.Message.Content, event.MessageID.String(), authorId.String(), gptThread.Id)
 
 		replyText(newThread.ID(), messageContent, event.MessageID.String(), authorId.String(), cohere.Send)
 	}

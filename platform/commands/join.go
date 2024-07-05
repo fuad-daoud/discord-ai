@@ -29,6 +29,20 @@ func AddCommandsChannelOnReadyHandler() {
 				break
 			case "command_leave":
 				go leave(call)
+				break
+			default:
+				{
+					cohere.Result <- &cohere.CommandResult{
+						Call: call.ToolCall,
+						Outputs: []map[string]interface{}{
+							{
+								"Success":     false,
+								"Description": "command not implemented",
+							},
+						},
+					}
+					break
+				}
 			}
 		}
 	}()
