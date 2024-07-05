@@ -8,14 +8,15 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/fuad-daoud/discord-ai/db"
 	"github.com/fuad-daoud/discord-ai/db/cypher"
+	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
-	"github.com/fuad-daoud/discord-ai/integrations/gpt"
 	"golang.org/x/net/context"
 	"log/slog"
+	"strings"
 	"time"
 )
 
-func handleDeepgramVoicePackets(conn voice.Conn, messageId string) {
+func HandleDeepgramVoicePackets(conn voice.Conn, messageId string) {
 
 	slog.Info("Added packets handler")
 	guildID := conn.GuildID()
@@ -56,8 +57,7 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 		if err != nil {
 			slog.Error("could not get user: ", userId, err)
 		}
-		perct := gpt.Detect(message, "", userId, thread.Name)
-		if perct < 80 {
+		if !(strings.HasPrefix(message, "luna") || strings.HasPrefix(message, "Luna")) {
 			return
 		}
 
@@ -72,11 +72,11 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 
 		//MATCH (m:Message {id: "1255887883848646769"}), (t:Thread) MATCH shortestPath((m)-[*]->(t)) RETURN m,t
 		go handleThread(thread.Id, *user, message)
-
-		response := gpt.SendMessageFullCycle(message, "", userId, thread.Name)
+		response := cohere.Send(message, "", userId, thread.Id)
 
 		voiceReader, err := deepgram.TTS(response)
 		if err != nil {
+			slog.Error("could not send tts: ", err)
 			panic(err)
 		}
 
@@ -86,7 +86,7 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 		}
 		go handleThread(thread.Id, selfUser.User, response)
 		conn.SetOpusFrameProvider(&AudioProvider{
-			source: voiceReader,
+			Source: voiceReader,
 		})
 		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
 		if err != nil {
@@ -129,6 +129,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 	}
 	slog.Info("got channel", "channel", channel.Name())
 
+	messageContent := event.Message.Content
 	if channel.Type() == discord.ChannelTypeGuildPublicThread {
 		var process Process
 		thread := channel.(discord.GuildThread)
@@ -154,8 +155,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 						panic(err)
 					}
 				}
-
-				response := gpt.SendMessageFullCycle(message+"(respond like you are whispering)", event.MessageID.String(), authorId.String(), thread.Name())
+				response := cohere.Send(message+"(respond like you are whispering)", event.MessageID.String(), authorId.String(), thread.ID().String())
 				voiceReader, err := deepgram.TTS(response)
 				if err != nil {
 					slog.Error("Failed to send speech", "err", err)
@@ -164,7 +164,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 				if botStateOk {
 					conn := event.Client().VoiceManager().GetConn(event.GuildID)
 					conn.SetOpusFrameProvider(&AudioProvider{
-						source: voiceReader,
+						Source: voiceReader,
 					})
 					return response
 				}
@@ -177,38 +177,41 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 					panic(err)
 				}
 				conn.SetOpusFrameProvider(&AudioProvider{
-					source: voiceReader,
+					Source: voiceReader,
 				})
 				return response
 			}
 		} else {
-			process = gpt.SendMessageFullCycle
+			process = cohere.Send
 		}
-		replyText(thread.ID(), event.Message.Content, event.MessageID.String(), authorId.String(), thread.Name(), process)
+		replyText(thread.ID(), messageContent, event.MessageID.String(), authorId.String(), process)
 	} else {
 		if channel.ID().String() != "1252273230727876619" && channel.ID().String() != "1252536839886082109" && channel.ID().String() != "1256856679379636276" {
 			return
 		}
 
-		gptThread := gpt.CreateThread()
-
-		perct := gpt.Detect(event.Message.Content, event.MessageID.String(), authorId.String(), gptThread.Id)
-		if perct < 80 {
+		if !(strings.HasPrefix(messageContent, "luna") || strings.HasPrefix(messageContent, "Luna")) {
 			return
 		}
+		var threadName string
 
-		newThread, err := restClient.CreateThreadFromMessage(channel.ID(), event.MessageID, discord.ThreadCreateFromMessage{Name: gptThread.Id, AutoArchiveDuration: 1440})
+		if strings.Index(messageContent, "\n") == -1 {
+			if len(messageContent) > 10 {
+				threadName = messageContent[0:10]
+			} else {
+				threadName = messageContent
+			}
+		} else {
+			threadName = messageContent[0:strings.Index(messageContent, "\n")]
+		}
+
+		newThread, err := restClient.CreateThreadFromMessage(channel.ID(), event.MessageID, discord.ThreadCreateFromMessage{Name: threadName, AutoArchiveDuration: 1440})
 		if err != nil {
 			slog.Error("could not create discord thread", err.Error())
 			panic(err)
 		}
-		slog.Info("Created discord thread with gpt id as name", "name", newThread.Name(), "id", newThread.ID())
 
-		response := gpt.SendMessageFullCycle(event.Message.Content, event.MessageID.String(), authorId.String(), gptThread.Id)
-
-		replyText(newThread.ID(), event.Message.Content, event.MessageID.String(), authorId.String(), newThread.Name(), func(message, messageId, userId, threadId string) string {
-			return response
-		})
+		replyText(newThread.ID(), messageContent, event.MessageID.String(), authorId.String(), cohere.Send)
 	}
 }
 
@@ -218,7 +221,7 @@ func botIsUpReadyHandler(event *events.Ready) {
 	slog.Info("Bot", "username", user.Username)
 }
 
-func replyText(channelId snowflake.ID, content, messageId, authorId, threadName string, process Process) {
+func replyText(channelId snowflake.ID, content, messageId, authorId string, process Process) {
 	processingMessage := "Dazzling✨💫"
 
 	message, err := Rest().CreateMessage(channelId, discord.MessageCreate{
@@ -228,7 +231,7 @@ func replyText(channelId snowflake.ID, content, messageId, authorId, threadName 
 		panic(err)
 	}
 
-	response := process(content, messageId, authorId, threadName)
+	response := process(content, messageId, authorId, channelId.String())
 	updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: &response})
 	if err != nil {
 		panic(err)
@@ -249,15 +252,4 @@ func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 		}
 		return
 	}
-}
-
-func addCommandsChannelOnReadyHandler() {
-	go func() {
-		for input := range gpt.Action {
-			switch input.Name {
-			case "join":
-				go JoinFunction(input)
-			}
-		}
-	}()
 }

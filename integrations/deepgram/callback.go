@@ -19,7 +19,7 @@ func (c *MyCallback) Message(mr *api.MessageResponse) error {
 		return nil
 	}
 
-	slog.Info("Deepgram", "Confidence", mr.Channel.Alternatives[0].Confidence, "sentence", sentence)
+	slog.Info("Deepgram", "Link", mr.Channel.Alternatives[0].Confidence, "sentence", sentence)
 	slog.Info("Deepgram", "isFinal", mr.IsFinal)
 	slog.Info("Deepgram", "isSpeachFinal", mr.SpeechFinal)
 	c.Builder.WriteString(sentence)

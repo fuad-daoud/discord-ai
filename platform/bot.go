@@ -10,7 +10,6 @@ import (
 	"golang.org/x/net/context"
 	"log/slog"
 	"os"
-	"time"
 )
 
 var client *bot.Client
@@ -60,22 +59,6 @@ func Setup() {
 	}
 	clientTmp.EventManager().AddEventListeners(Handler{})
 	client = &clientTmp
-
-	go func() {
-		time.Sleep(2 * time.Second)
-		addCommandsChannelOnReadyHandler()
-
-		//gpt.Action <- gpt.FunctionInput{
-		//	Function: gpt.Function{
-		//		Name:      "join",
-		//		Arguments: "",
-		//	},
-		//	UserId:    "468494540852953089",
-		//	MessageId: "1255909408043696190",
-		//}
-
-	}()
-
 }
 
 type Handler struct {

@@ -12,11 +12,11 @@ FROM debian:bullseye-slim
 
 
 RUN mkdir /src
-RUN mkdir /src/files
-RUN mkdir /src/files/wav
+RUN mkdir -p /src/integrations/cohere
 
 COPY --from=build /workspace/discord-ai /src
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /workspace/integrations/cohere/cohere-inst.txt /src/integrations/cohere
 
 WORKDIR /src
 

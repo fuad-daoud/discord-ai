@@ -9,12 +9,12 @@ import (
 
 type AudioProvider struct {
 	decoder *ogg.PacketDecoder
-	source  io.ReadCloser
+	Source  io.Reader
 }
 
 func (p *AudioProvider) ProvideOpusFrame() ([]byte, error) {
 	if p.decoder == nil {
-		p.decoder = ogg.NewPacketDecoder(ogg.NewDecoder(p.source))
+		p.decoder = ogg.NewPacketDecoder(ogg.NewDecoder(p.Source))
 	}
 
 	data, _, err := p.decoder.Decode()
@@ -26,10 +26,10 @@ func (p *AudioProvider) ProvideOpusFrame() ([]byte, error) {
 }
 
 func (p *AudioProvider) Close() {
-	if c, ok := p.source.(io.Closer); ok {
+	if c, ok := p.Source.(io.Closer); ok {
 		_ = c.Close()
 	}
-	_ = p.source.Close()
+	//_ = p.Source.Close()
 }
 
 func (p *AudioProvider) Wait() error {

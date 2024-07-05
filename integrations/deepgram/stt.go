@@ -1,7 +1,6 @@
 package deepgram
 
 import (
-	"bytes"
 	"github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
 	deepgramLive "github.com/deepgram/deepgram-go-sdk/pkg/client/live"
 	"golang.org/x/net/context"
@@ -23,14 +22,14 @@ const (
 
 func Write(p []byte, userId string) {
 
-	if bytes.Equal(p, silentPacket) {
-		silentPacketsCounter[userId]++
-	} else {
-		silentPacketsCounter[userId] = 0
-	}
-	if silentPacketsCounter[userId]*silentPacketTime >= silentSecond {
-		return
-	}
+	//if bytes.Equal(p, silentPacket) {
+	//	silentPacketsCounter[userId]++
+	//} else {
+	//	silentPacketsCounter[userId] = 0
+	//}
+	//if silentPacketsCounter[userId]*silentPacketTime >= silentSecond {
+	//	return
+	//}
 
 	deepgramClient := clients[userId]
 
@@ -71,7 +70,7 @@ func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.
 			Diarize:         false,
 			DiarizeVersion:  "",
 			Encoding:        "opus",
-			Endpointing:     "90",
+			Endpointing:     "80",
 			Extra:           nil,
 			FillerWords:     true,
 			InterimResults:  true,
