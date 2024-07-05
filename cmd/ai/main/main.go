@@ -4,10 +4,12 @@ import (
 	"github.com/fuad-daoud/discord-ai/db"
 	"github.com/fuad-daoud/discord-ai/http"
 	"github.com/fuad-daoud/discord-ai/platform"
+	"github.com/fuad-daoud/discord-ai/platform/commands"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
+	"time"
 )
 
 func init() {
@@ -18,9 +20,12 @@ func init() {
 
 func main() {
 	db.Connect()
-	go platform.CancelAllPendingRuns()
 	go http.Setup()
 	go platform.Setup()
+	go func() {
+		time.Sleep(2 * time.Second)
+		commands.AddCommandsChannelOnReadyHandler()
+	}()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	<-stop

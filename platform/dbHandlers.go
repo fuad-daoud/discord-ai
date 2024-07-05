@@ -6,7 +6,6 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/fuad-daoud/discord-ai/db"
 	"github.com/fuad-daoud/discord-ai/db/cypher"
-	"github.com/fuad-daoud/discord-ai/integrations/gpt"
 	"log/slog"
 	"strings"
 )
@@ -174,15 +173,5 @@ func addMembers(write db.Write, err error, event *events.Ready, guild *discord.R
 			cypher.MatchN("m", memberNode),
 			cypher.Merge("(g)-[:HAS]->(m)-[:MEMBER_OF]->(g)"),
 		)
-	}
-}
-
-func CancelAllPendingRuns() {
-	result := db.Query(cypher.Match("(t:Thread)"), cypher.Return("t"))
-
-	threads, _ := cypher.ParseAll[db.TextChannel]("t", result)
-
-	for _, thread := range threads {
-		go gpt.CancelRunsForThread(thread.Name)
 	}
 }
