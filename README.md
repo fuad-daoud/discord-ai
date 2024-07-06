@@ -3,7 +3,7 @@
 # Luna
 
 <div>
-    <img src="./assets/f4194196df8d.png" alt="css-in-readme" style="border-radius: 50%;width: 300px;">
+    <img src="./assets/luna-victor-rounded-removebg-preview.png"  style="width: 300px;">
 </div>
 <h2>GitHub Luna Stats</h2>
 
@@ -76,10 +76,13 @@ export OPENAI_API_KEY="sk-proj-AsgPdFnfbcgSNTBdZivIT3BlbkFJPVWizOOQqwPygX2ctH78"
 export RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 ```
 
-<div align="center">
+<div align="left">
 
 ![](https://digitallands-readme.vercel.app/api?username=fuad-daoud&include_all_commits=true&count_private=true&hide=stars&show_icons=true&hide_rank=true&include_all_commits=true&line_height=28&title_color=0C5851&text_color=0C5851&icon_color=0C5851&bg_color=315,1DE7CF,7880E2&hide_border=true&cache_seconds=14400&locale=en&border_radius=8)<br>
 
-[![Top Langs](https://digitallands-readme.vercel.app/api/top-langs/?username=fuad-daoud&layout=pie)](https://github.com/fuad-daoud/github-readme-stats)
+</div>
 
+<div align="right">
+
+[![Top Langs](https://digitallands-readme.vercel.app/api/top-langs/?username=fuad-daoud&layout=pie)](https://github.com/fuad-daoud/github-readme-stats)
 </div>
