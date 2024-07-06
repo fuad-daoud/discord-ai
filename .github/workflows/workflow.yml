@@ -22,9 +22,9 @@ jobs:
       - name: Slim
         uses: kitabisa/docker-slim-action@v1
         env:
-          DSLIM_HTTP_PROBE: false
+          DSLIM_HTTP_PROBE: true
           DSLIM_INCLUDE_PATH: "/etc/ssl/certs/"
-          DSLIM_INCLUDE_PATH_FILE: "/src/integrations/cohere/cohere-inst.txt"
+          DSLIM_INCLUDE_WORKDIR: true
 
         with:
           target: "${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
