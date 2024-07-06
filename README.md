@@ -1,10 +1,9 @@
 <div align="center">
 
-# Luna
+<h1>Luna</h1>
 
-<div>
-    <img src="./assets/luna-victor-rounded-removebg-preview.png"  style="width: 300px;">
-</div>
+<img src="./assets/luna-victor-rounded-removebg-preview.png"  style="width: 300px;">
+
 <h2>GitHub Luna Stats</h2>
 
 [![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg?branch=main)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
@@ -12,8 +11,6 @@
 [![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
 
 **powered by augment generative AI**
-<div style="display: flex; justify-content: space-around;">
-
 
 
 ![cohere](https://cdn.sanity.io/images/rjtqmwfu/production/ae020d94b599cc453cc09ebc80be06d35d953c23-102x18.svg)
@@ -21,10 +18,7 @@
 ![deepgram](https://dbai04gkae79n.cloudfront.net/prod/5b651e5/deepgram.96891cf7abef.svg)
 
 ![disgo](https://github.com/disgoorg/disgo/raw/master/.github/discord_gopher.png)
-
 </div>
-</div>
-
 
 
 
@@ -76,13 +70,10 @@ export OPENAI_API_KEY="sk-proj-AsgPdFnfbcgSNTBdZivIT3BlbkFJPVWizOOQqwPygX2ctH78"
 export RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 ```
 
-<div align="left">
+<div align="center">
 
 ![](https://digitallands-readme.vercel.app/api?username=fuad-daoud&include_all_commits=true&count_private=true&hide=stars&show_icons=true&hide_rank=true&include_all_commits=true&line_height=28&title_color=0C5851&text_color=0C5851&icon_color=0C5851&bg_color=315,1DE7CF,7880E2&hide_border=true&cache_seconds=14400&locale=en&border_radius=8)<br>
 
-</div>
-
-<div align="right">
 
 [![Top Langs](https://digitallands-readme.vercel.app/api/top-langs/?username=fuad-daoud&layout=pie)](https://github.com/fuad-daoud/github-readme-stats)
 </div>
