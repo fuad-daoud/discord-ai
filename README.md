@@ -12,12 +12,14 @@
 
 **powered by augment generative AI**
 
-
 ![cohere](https://cdn.sanity.io/images/rjtqmwfu/production/ae020d94b599cc453cc09ebc80be06d35d953c23-102x18.svg)
 
 ![deepgram](https://dbai04gkae79n.cloudfront.net/prod/5b651e5/deepgram.96891cf7abef.svg)
 
 ![disgo](https://github.com/disgoorg/disgo/raw/master/.github/discord_gopher.png)
+
+![elevenlabs](./assets/elvenlabs-rounded.png)
+
 </div>
 
 
