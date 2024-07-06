@@ -13,7 +13,7 @@ jobs:
       contents: 'read'
       id-token: 'write'
     steps:
-      - name: Checkout the Dockerfile
+      - name: Checkout the repo
         uses: actions/checkout@v4
         with:
           show-progress: true
@@ -23,8 +23,9 @@ jobs:
         uses: kitabisa/docker-slim-action@v1
         env:
           DSLIM_HTTP_PROBE: false
-          DSLIM_INCLUDE_BIN: "/usr/bin/ffmpeg"
           DSLIM_INCLUDE_PATH: "/etc/ssl/certs/"
+          DSLIM_INCLUDE_PATH_FILE: "/src/integrations/cohere/cohere-inst.txt"
+
         with:
           target: "${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
           overwrite: true
@@ -63,7 +64,7 @@ jobs:
             --set metadata.location=${{ vars.REGION }} \
             --set metadata.name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
             --set spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }} \
-            --set spec.env.TOKEN=${{ vars.LUNA_TOKEN }} \
+            --set spec.env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
             --set spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
             --set spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
             --set spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
@@ -106,10 +107,13 @@ jobs:
         run: gcloud run services replace service.yaml --format json --region ${{ vars.REGION }}
       - name: Make it public
         run: gcloud run services add-iam-policy-binding ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
-      - name: Wait 30 seconds
-        run: sleep 30s
+      - name: Wait 90 seconds
+        run: sleep 90s
       - name: Run curl
         run: curl --fail $(gcloud run services describe ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --format json --region europe-west8 | jq -c -e -j .status.url)
       - name: Remove service
         if: github.ref_type != 'tag'
         run: gcloud run services delete ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --region ${{ vars.REGION }} --quiet
+      - name: Remove docker image
+        if: github.ref_type != 'tag'
+        run: docker image rm ${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
