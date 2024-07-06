@@ -112,6 +112,9 @@ jobs:
       - name: Run curl
         run: curl --fail $(gcloud run services describe ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --format json --region europe-west8 | jq -c -e -j .status.url)
   cleanup:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     runs-on: ubuntu-latest
     needs: [ deploy ]
     if: github.ref_type != 'tag'
