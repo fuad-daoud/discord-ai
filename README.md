@@ -1,14 +1,36 @@
-[![Build](https://github.com/fuad-daoud/discord-ai/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/fuad-daoud/discord-ai/actions/workflows/build.yml)
-[![Release](https://github.com/fuad-daoud/discord-ai/actions/workflows/release.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/release.yml)
+<div align="center">
 
-![pixlr-image-generator-9f541022-7289-4425-b761-f4194196df8d.png](..%2F..%2FDownloads%2Fluna%2Fpixlr-image-generator-9f541022-7289-4425-b761-f4194196df8d.png)
+<h1>Luna</h1>
+
+<img src="./assets/luna-victor-rounded-removebg-preview.png"  style="width: 300px;">
+
+<h2>GitHub Luna Stats</h2>
+
+[![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg?branch=main)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
+[![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
+[![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
+
+**powered by augment generative AI**
+
+![cohere](https://cdn.sanity.io/images/rjtqmwfu/production/ae020d94b599cc453cc09ebc80be06d35d953c23-102x18.svg)
+
+![deepgram](https://dbai04gkae79n.cloudfront.net/prod/5b651e5/deepgram.96891cf7abef.svg)
+
+![disgo](https://github.com/disgoorg/disgo/raw/master/.github/discord_gopher.png)
+
+![elevenlabs](./assets/elvenlabs-rounded.png)
+
+</div>
+
+
+
 
 docker container `ubuntu:22.04`
 
-install go v1.2.0 in ubuntu 
-
+install go v1.2.0 in ubuntu
 
 logged in as `root`
+
 ```bash
 apt update
 wget https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
@@ -21,8 +43,8 @@ source ~/.profile
 go version
 ```
 
-
 logged in as `non root`
+
 ```bash
 sudo apt update
 wget https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
@@ -52,4 +74,8 @@ export RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 
 
 
+![](https://digitallands-readme.vercel.app/api?username=fuad-daoud&include_all_commits=true&count_private=true&hide=stars&show_icons=true&hide_rank=true&include_all_commits=true&line_height=28&theme=graywhite&hide_border=true&cache_seconds=14400&locale=en&border_radius=8)<br>
+
+
+[//]: # ([![Top Langs]&#40;https://digitallands-readme.vercel.app/api/top-langs/?username=fuad-daoud&layout=pie&#41;]&#40;https://github.com/fuad-daoud/github-readme-stats&#41;)
 

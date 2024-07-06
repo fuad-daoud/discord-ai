@@ -1,0 +1,7 @@
+<svg width="500" height="500" xmlns="http://www.w3.org/2000/svg">
+    <foreignObject x="10" y="10" width="480" height="480" xmlns="http://www.w3.org/1999/xhtml">
+        <div>
+            <img src="https://placehold.co/600x400.png" alt="Example PNG Image" width="480" height="480" />
+        </div>
+    </foreignObject>
+</svg>
