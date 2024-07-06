@@ -2,7 +2,7 @@
 [![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
 [![build-deploy](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml/badge.svg)](https://github.com/fuad-daoud/discord-ai/actions/workflows/workflow.yml)
 
-![f4194196df8d.png](./assets/f4194196df8d.png)
+![f4194196df8d.png](./assets/f4194196df8d.png =250x250)
 
 docker container `ubuntu:22.04`
 
