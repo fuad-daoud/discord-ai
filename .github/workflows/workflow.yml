@@ -22,7 +22,7 @@ jobs:
       - name: Slim
         uses: kitabisa/docker-slim-action@v1
         env:
-          DSLIM_HTTP_PROBE: true
+          DSLIM_HTTP_PROBE: false
           DSLIM_INCLUDE_PATH: "/etc/ssl/certs/"
           DSLIM_INCLUDE_WORKDIR: true
 
