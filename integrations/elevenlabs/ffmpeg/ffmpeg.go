@@ -3,12 +3,10 @@ package ffmpeg
 import (
 	"bufio"
 	"context"
-	"io"
-	"os/exec"
-	"strconv"
-
 	"github.com/disgoorg/disgo/voice"
 	"github.com/jonas747/ogg"
+	"io"
+	"os/exec"
 )
 
 const (
@@ -29,9 +27,9 @@ func New(ctx context.Context, r io.Reader, opts ...ConfigOpt) (*AudioProvider, e
 		"-i",
 		"pipe:0",
 		"-c:a", "libopus",
-		"-ac", strconv.Itoa(cfg.Channels),
-		"-ar", strconv.Itoa(cfg.SampleRate),
-		"-f", "ogg",
+		//"-ac", strconv.Itoa(cfg.Channels),
+		//"-ar", strconv.Itoa(cfg.SampleRate),
+		"-f", "opus",
 		"-b:a",
 		"96K",
 		"pipe:1",
