@@ -234,6 +234,7 @@ func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 }
 
 func isCallingMe(message string) bool {
+	message = strings.ToLower(message)
 	prefixes := []string{"luna", "hey luna", "hello luna", "hello, luna", "you luna", "ya luna", "ola luna", "luna hello", "luna, hello"}
 	slog.Info("detecting message", "message", message)
 	for _, prefix := range prefixes {
