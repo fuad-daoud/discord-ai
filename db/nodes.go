@@ -32,3 +32,8 @@ type Member struct {
 	Name      string `json:"name"`
 	AvatarUrl string `json:"avatarUrl"`
 }
+
+type Server struct {
+	HostName    string `json:"hostName"`
+	CreatedDate string `json:"createdDate"`
+}
