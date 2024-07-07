@@ -62,7 +62,7 @@ jobs:
         run: |
           helm template cloud --output-dir cloud/rendered \
             --set metadata.location=${{ vars.REGION }} \
-            --set metadata.name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
+            --set metadata.name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, 'branch') }} \
             --set spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }} \
             --set spec.env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
             --set spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
@@ -72,6 +72,7 @@ jobs:
             --set spec.env.CLIENT_SECRET=${{ vars.CLIENT_SECRET }} \
             --set spec.env.DEEPGRAM_API_KEY=${{ vars.DEEPGRAM_API_KEY }} \
             --set spec.env.OPENAI_API_KEY=${{ vars.OPENAI_API_KEY }} \
+            --set spec.env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
       - name: Upload service yaml
         uses: actions/upload-artifact@v4
         with:
