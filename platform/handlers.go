@@ -10,6 +10,7 @@ import (
 	"github.com/fuad-daoud/discord-ai/db/cypher"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
+	"github.com/fuad-daoud/discord-ai/integrations/elevenlabs"
 	"golang.org/x/net/context"
 	"log/slog"
 	"strings"
@@ -57,7 +58,7 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 		if err != nil {
 			slog.Error("could not get user: ", userId, err)
 		}
-		if !(strings.HasPrefix(message, "luna") || strings.HasPrefix(message, "Luna")) {
+		if !(isCallingMe(message)) {
 			return
 		}
 
@@ -71,23 +72,17 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 		}
 
 		//MATCH (m:Message {id: "1255887883848646769"}), (t:Thread) MATCH shortestPath((m)-[*]->(t)) RETURN m,t
-		go handleThread(thread.Id, *user, message)
-		response := cohere.Send(message, "", userId, thread.Id)
+		messageId := handleThread(thread.Id, *user, message)
+		response := cohere.Send(message, messageId, userId, thread.Id)
 
-		voiceReader, err := deepgram.TTS(response)
-		if err != nil {
-			slog.Error("could not send tts: ", err)
-			panic(err)
-		}
+		audioProvider, err := elevenlabs.TTS(response)
 
 		selfUser, b := Cache().SelfUser()
 		if !b {
 			slog.Error("could not get self user")
 		}
 		go handleThread(thread.Id, selfUser.User, response)
-		conn.SetOpusFrameProvider(&AudioProvider{
-			Source: voiceReader,
-		})
+		conn.SetOpusFrameProvider(audioProvider)
 		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
 		if err != nil {
 			slog.Error("could not update voice state: ", err)
@@ -95,26 +90,14 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 	}
 }
 
-//go indicator(voiceConnection, "processing-this-wont-take-long.wav")
-//go indicator(conn, "rizz-sounds.mp3", )
-//go indicator(voiceConnection, "formula-1-radio-notification.mp3")
-
-// text := "Hey there, I'm Luna, your stunning Discord bot. What can I do for you today?"
-// text := "I don't have access to real-time information like the current date. But you can check on your device, love. Is there anything else you'd like me to do?"
-//
-//	func indicator(conn voice.Conn, file string) {
-//		err := Talk(conn, "files/fixed-replies/"+file)
-//		if err != nil {
-//			panic(err)
-//		}
-//	}
-func handleThread(threadId string, user discord.User, message string) {
-	message = fmt.Sprintf("%s: %s", user.Mention(), message)
+func handleThread(threadId string, user discord.User, message string) string {
+	message = fmt.Sprintf("%s: %s", user.Username, message)
 	createMessage, err := Rest().CreateMessage(snowflake.MustParse(threadId), discord.MessageCreate{Content: message})
 	if err != nil {
 		panic(err)
 	}
 	slog.Info("Created message", "ID", createMessage.ID)
+	return createMessage.ID.String()
 }
 
 func messageCreateHandler(event *events.GuildMessageCreate) {
@@ -156,16 +139,14 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 					}
 				}
 				response := cohere.Send(message+"(respond like you are whispering)", event.MessageID.String(), authorId.String(), thread.ID().String())
-				voiceReader, err := deepgram.TTS(response)
+				audioProvider, err := elevenlabs.TTS(response)
 				if err != nil {
 					slog.Error("Failed to send speech", "err", err)
 					panic(err)
 				}
 				if botStateOk {
 					conn := event.Client().VoiceManager().GetConn(event.GuildID)
-					conn.SetOpusFrameProvider(&AudioProvider{
-						Source: voiceReader,
-					})
+					conn.SetOpusFrameProvider(audioProvider)
 					return response
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -176,9 +157,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 					slog.Error("Failed to open voice channel", "channel", event.GuildID, "error", err)
 					panic(err)
 				}
-				conn.SetOpusFrameProvider(&AudioProvider{
-					Source: voiceReader,
-				})
+				conn.SetOpusFrameProvider(audioProvider)
 				return response
 			}
 		} else {
@@ -190,7 +169,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 			return
 		}
 
-		if !(strings.HasPrefix(messageContent, "luna") || strings.HasPrefix(messageContent, "Luna")) {
+		if !(isCallingMe(messageContent)) {
 			return
 		}
 		var threadName string
@@ -252,4 +231,15 @@ func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 		}
 		return
 	}
+}
+
+func isCallingMe(message string) bool {
+	prefixes := []string{"luna", "hey luna", "hello luna", "hello, luna", "you luna", "ya luna", "ola luna", "luna hello", "luna, hello"}
+	slog.Info("detecting message", "message", message)
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(message, prefix) {
+			return true
+		}
+	}
+	return false
 }

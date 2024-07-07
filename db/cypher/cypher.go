@@ -59,6 +59,10 @@ func Cypher(key string, val any) string {
 }
 
 func ToProperties(val any) string {
+	if val == nil {
+		panic("Val in ToProperties can't be nil")
+	}
+
 	m := toMap(val)
 
 	stringBuilder := strings.Builder{}

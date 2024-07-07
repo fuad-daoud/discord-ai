@@ -1,16 +1,14 @@
 package commands
 
 import (
-	"bufio"
-	"bytes"
 	"github.com/disgoorg/disgo/voice"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/fuad-daoud/discord-ai/db"
 	"github.com/fuad-daoud/discord-ai/db/cypher"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
+	"github.com/fuad-daoud/discord-ai/integrations/elevenlabs"
 	"github.com/fuad-daoud/discord-ai/platform"
 	"golang.org/x/net/context"
-	"io/ioutil"
 	"log/slog"
 )
 
@@ -162,12 +160,13 @@ func joinFunction(call *cohere.CommandCall) {
 			},
 		},
 	}
-	slog.Info("Testing talking")
-	file, _ := ioutil.ReadFile("/home/fuad/GolandProjects/discord-ai/output.opus")
-	closer := bytes.NewReader(file)
-	conn.SetOpusFrameProvider(&platform.AudioProvider{
-		Source: bufio.NewReader(closer),
-	})
+	audioProvider, err := elevenlabs.TTS("I am here !!")
+	if err != nil {
+		panic(err)
+	}
+
+	conn.SetOpusFrameProvider(audioProvider)
+
 	slog.Info("Finished joining function")
 	return
 }
