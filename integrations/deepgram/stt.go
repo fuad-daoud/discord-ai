@@ -22,18 +22,9 @@ const (
 
 func Write(p []byte, userId string) {
 
-	//if bytes.Equal(p, silentPacket) {
-	//	silentPacketsCounter[userId]++
-	//} else {
-	//	silentPacketsCounter[userId] = 0
-	//}
-	//if silentPacketsCounter[userId]*silentPacketTime >= silentSecond {
-	//	return
-	//}
-
 	deepgramClient := clients[userId]
 
-	voiceBytes, err := deepgramClient.Write(p)
+	_, err := deepgramClient.Write(p)
 	if err != nil {
 		if clients[userId] == nil {
 			slog.Info("Stopping deepgram writing because deepgramLive is stopped")
@@ -43,7 +34,7 @@ func Write(p []byte, userId string) {
 			return
 		}
 	}
-	slog.Info("deepgram reading", "bytes", voiceBytes)
+	//slog.Info("deepgram reading", "bytes", voiceBytes)
 }
 
 func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.Client {
