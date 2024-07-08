@@ -61,7 +61,7 @@ jobs:
       - name: Templating
         run: |
           helm template cloud --output-dir cloud/rendered \
-            --set metadata.location=${{ vars.REGION }} \
+            --set metadata.location=me-west1 \
             --set metadata.name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, 'branch') }} \
             --set spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }} \
             --set spec.env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
@@ -105,9 +105,9 @@ jobs:
         with:
           version: '>= 482.0.0'
       - name: Deploy cloud run
-        run: gcloud run services replace service.yaml --format json --region ${{ vars.REGION }}
+        run: gcloud run services replace service.yaml --format json --region me-west1
       - name: Make it public
-        run: gcloud run services add-iam-policy-binding ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, 'branch') }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
+        run: gcloud run services add-iam-policy-binding ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, 'branch') }} --member="allUsers" --role="roles/run.invoker" --region me-west1
       - name: Run curl
         run: curl --fail $(gcloud run services describe ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, 'branch') }} --format json --region europe-west8 | jq -c -e -j .status.url)
   cleanup:
@@ -129,7 +129,7 @@ jobs:
       - name: Wait before delete
         run: sleep 2m
       - name: Remove service
-        run: gcloud run services delete ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, 'branch') }} --region ${{ vars.REGION }} --quiet
+        run: gcloud run services delete ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, 'branch') }} --region me-west1 --quiet
       - name: Remove docker image
         run: gcloud container images delete ${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }} --quiet
 
