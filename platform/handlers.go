@@ -13,6 +13,8 @@ import (
 	"github.com/fuad-daoud/discord-ai/integrations/elevenlabs"
 	"golang.org/x/net/context"
 	"log/slog"
+	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -198,6 +200,42 @@ func botIsUpReadyHandler(event *events.Ready) {
 	user, _ := event.Client().Caches().SelfUser()
 	slog.Info("Bot is up!")
 	slog.Info("Bot", "username", user.Username)
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+	ips, err := GetLocalIPs()
+	if err != nil {
+		panic(err)
+	}
+	content := "I AM ALIVE in " + hostname + " IPs [ "
+	for _, ip := range ips {
+		content += ip.String() + " "
+	}
+	content += "]"
+	message, err := event.Client().Rest().CreateMessage(snowflake.MustParse("1252273230727876619"), discord.MessageCreate{
+		Content: content,
+	})
+	if err != nil {
+		panic(err)
+	}
+	slog.Info("Created message", "ID", message.ID.String(), "content", message.Content)
+}
+func GetLocalIPs() ([]net.IP, error) {
+	var ips []net.IP
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, addr := range addresses {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				ips = append(ips, ipnet.IP)
+			}
+		}
+	}
+	return ips, nil
 }
 
 func replyText(channelId snowflake.ID, content, messageId, authorId string, process Process) {

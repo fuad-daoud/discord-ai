@@ -13,9 +13,9 @@ import (
 )
 
 func init() {
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile | log.Lmsgprefix)
-	name, _ := os.Hostname()
-	log.SetPrefix(name)
+	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
+	//name, _ := os.Hostname()
+	//log.SetPrefix(name)
 
 	//slog.SetLogLoggerLevel(slog.LevelDebug)
 }

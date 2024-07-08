@@ -2,13 +2,11 @@ package db
 
 import "C"
 import (
-	"github.com/fuad-daoud/discord-ai/db/cypher"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"golang.org/x/net/context"
 	"log/slog"
 	"os"
 	"strings"
-	"time"
 )
 
 type dbConnection struct {
@@ -87,17 +85,17 @@ func Connect() {
 	connection = &dbConnection{driver: driver}
 	slog.Info("Connection established.", "URI", dbUri)
 
-	InTransaction(func(write Write) {
-		hostname, err := os.Hostname()
-		if err != nil {
-			slog.Error("Error getting hostname", "err", err)
-			panic(err)
-		}
-		write(cypher.MergeN("s", Server{
-			HostName:    hostname,
-			CreatedDate: time.Now().String(),
-		}))
-	})
+	//InTransaction(func(write Write) {
+	//	hostname, err := os.Hostname()
+	//	if err != nil {
+	//		slog.Error("Error getting hostname", "err", err)
+	//		panic(err)
+	//	}
+	//	write(cypher.MergeN("s", Server{
+	//		HostName:    hostname,
+	//		CreatedDate: time.Now().String(),
+	//	}))
+	//})
 }
 
 func Close() {
