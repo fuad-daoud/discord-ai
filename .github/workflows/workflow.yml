@@ -39,6 +39,8 @@ jobs:
           password: 1234Test
           source: ${{ github.workspace }}/bin/run
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+          strip_components: 3
+          overwrite: true
 
   helm:
     runs-on: ubuntu-latest
@@ -66,7 +68,7 @@ jobs:
             --set env.CLIENT_SECRET=${{ vars.CLIENT_SECRET }} \
             --set env.DEEPGRAM_API_KEY=${{ vars.DEEPGRAM_API_KEY }} \
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
-      - name: scp binary to server
+      - name: scp config to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 165.22.92.220
@@ -74,6 +76,7 @@ jobs:
           password: 1234Test
           source: ${{ github.workspace }}/cloud/rendered/cloud/templates/pm2.yaml
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+          strip_components: 7
           overwrite: true
   deploy:
     runs-on: ubuntu-latest
