@@ -1,5 +1,5 @@
 name: discord-ai
-script: 'bin/main'
+script: 'run'
 cwd: '/root/discord-ai'
 interpreter: '/bin/bash'
 exec_mode: 'fork'
