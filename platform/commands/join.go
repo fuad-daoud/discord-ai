@@ -7,9 +7,9 @@ import (
 	"github.com/fuad-daoud/discord-ai/db/cypher"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/integrations/elevenlabs"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/fuad-daoud/discord-ai/platform"
 	"golang.org/x/net/context"
-	"log/slog"
 )
 
 func AddCommandsChannelOnReadyHandler() {
@@ -70,7 +70,7 @@ func getGuildId(messageId string) string {
 }
 
 func joinFunction(call *cohere.CommandCall) {
-	slog.Info("starting join function")
+	dlog.Info("starting join function")
 	toolCall := call.ToolCall
 	properties := call.Properties
 	guildId := snowflake.MustParse(properties["guildId"].(string))
@@ -107,7 +107,7 @@ func joinFunction(call *cohere.CommandCall) {
 	}
 
 	conn := platform.Client().VoiceManager().CreateConn(guildId)
-	slog.Info("Staring joinVoiceChannel function")
+	dlog.Info("Staring joinVoiceChannel function")
 
 	if err := conn.Open(context.Background(), *voiceState.ChannelID, false, false); err != nil {
 		cohere.Result <- &cohere.CommandResult{
@@ -121,7 +121,7 @@ func joinFunction(call *cohere.CommandCall) {
 		}
 		return
 	}
-	slog.Info("opened connection successfully")
+	dlog.Info("opened connection successfully")
 	if err := conn.SetSpeaking(context.Background(), voice.SpeakingFlagMicrophone); err != nil {
 		cohere.Result <- &cohere.CommandResult{
 			Call: toolCall,
@@ -134,7 +134,7 @@ func joinFunction(call *cohere.CommandCall) {
 		}
 		return
 	}
-	slog.Info("set speaking successfully")
+	dlog.Info("set speaking successfully")
 	if _, err := conn.UDP().Write(voice.SilenceAudioFrame); err != nil {
 		cohere.Result <- &cohere.CommandResult{
 			Call: toolCall,
@@ -147,7 +147,7 @@ func joinFunction(call *cohere.CommandCall) {
 		}
 		return
 	}
-	slog.Info("wrote silent frame successfully")
+	dlog.Info("wrote silent frame successfully")
 
 	go platform.HandleDeepgramVoicePackets(conn, properties["messageId"].(string))
 
@@ -167,6 +167,6 @@ func joinFunction(call *cohere.CommandCall) {
 
 	conn.SetOpusFrameProvider(audioProvider)
 
-	slog.Info("Finished joining function")
+	dlog.Info("Finished joining function")
 	return
 }

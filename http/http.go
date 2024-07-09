@@ -2,7 +2,7 @@ package http
 
 import (
 	"fmt"
-	"log/slog"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"net/http"
 	"strconv"
 )
@@ -12,7 +12,7 @@ func Setup() {
 	http.HandleFunc("/status", statusHandler)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		slog.Error("Could not serve on 8080")
+		dlog.Error("Could not serve on 8080")
 		panic(err)
 	}
 }

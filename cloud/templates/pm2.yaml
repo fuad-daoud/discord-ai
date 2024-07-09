@@ -3,7 +3,6 @@ apps:
     script: '{{ .Values.script }}'
     cwd: '{{ .Values.cwd }}'
     instances: '{{ .Values.instances }}'
-    interpreter: '{{ .Values.interpreter }}'
     exec_mode: '{{ .Values.exec_mode }}'
     instance_var: '{{ .Values.instance_var }}'
     max_memory_restart: {{ .Values.max_memory_restart }}

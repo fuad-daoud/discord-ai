@@ -3,22 +3,13 @@ package main
 import (
 	"github.com/fuad-daoud/discord-ai/db"
 	"github.com/fuad-daoud/discord-ai/http"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/fuad-daoud/discord-ai/platform"
 	"github.com/fuad-daoud/discord-ai/platform/commands"
-	"log"
-	"log/slog"
 	"os"
 	"os/signal"
 	"time"
 )
-
-func init() {
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
-	//name, _ := os.Hostname()
-	//log.SetPrefix(name)
-
-	//slog.SetLogLoggerLevel(slog.LevelDebug)
-}
 
 func main() {
 	db.Connect()
@@ -33,5 +24,5 @@ func main() {
 	<-stop
 	defer platform.Close()
 	defer db.Close()
-	slog.Info("Graceful shutdown")
+	dlog.Info("Graceful shutdown")
 }

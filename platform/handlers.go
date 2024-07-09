@@ -11,8 +11,8 @@ import (
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
 	"github.com/fuad-daoud/discord-ai/integrations/elevenlabs"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
-	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -21,7 +21,7 @@ import (
 
 func HandleDeepgramVoicePackets(conn voice.Conn, messageId string) {
 
-	slog.Info("Added packets handler")
+	dlog.Info("Added packets handler")
 	guildID := conn.GuildID()
 	result := db.Query(cypher.MatchN("m", db.Message{Id: messageId}), "-[]-", "(t:Thread)", cypher.Return("t"))
 	thread, _ := cypher.ParseKey[db.TextChannel]("t", result)
@@ -40,7 +40,7 @@ func HandleDeepgramVoicePackets(conn voice.Conn, messageId string) {
 		}
 		voiceState, _ := Cache().VoiceState(guildID, Client().ApplicationID())
 		//if !b {
-		//	slog.Error("bot not connected to a voice channel")
+		//	dlog.Error("bot not connected to a voice channel")
 		//}
 		if voiceState.SelfDeaf || voiceState.GuildDeaf {
 			continue
@@ -54,11 +54,11 @@ func HandleDeepgramVoicePackets(conn voice.Conn, messageId string) {
 func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChannel) deepgram.FinishedCallBack {
 
 	return func(message string, userId string) {
-		slog.Info("finished call back starting ...", "userId", userId)
+		dlog.Info("finished call back starting ...", "userId", userId)
 		snowflakeUserId := snowflake.MustParse(userId)
 		user, err := Rest().GetUser(snowflakeUserId)
 		if err != nil {
-			slog.Error("could not get user: ", userId, err)
+			dlog.Error("could not get user: ", userId, err)
 		}
 		if !(isCallingMe(message)) {
 			return
@@ -66,11 +66,11 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 
 		userState, userStateOk := Cache().VoiceState(guildId, snowflakeUserId)
 		if !userStateOk {
-			slog.Error("Member voice state not okay")
+			dlog.Error("Member voice state not okay")
 		}
 		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, true)
 		if err != nil {
-			slog.Error("could not update voice state: ", err)
+			dlog.Error("could not update voice state: ", err)
 		}
 
 		//MATCH (m:Message {id: "1255887883848646769"}), (t:Thread) MATCH shortestPath((m)-[*]->(t)) RETURN m,t
@@ -81,13 +81,13 @@ func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChann
 
 		selfUser, b := Cache().SelfUser()
 		if !b {
-			slog.Error("could not get self user")
+			dlog.Error("could not get self user")
 		}
 		go handleThread(thread.Id, selfUser.User, response)
 		conn.SetOpusFrameProvider(audioProvider)
 		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
 		if err != nil {
-			slog.Error("could not update voice state: ", err)
+			dlog.Error("could not update voice state: ", err)
 		}
 	}
 }
@@ -98,7 +98,7 @@ func handleThread(threadId string, user discord.User, message string) string {
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("Created message", "ID", createMessage.ID)
+	dlog.Info("Created message", "ID", createMessage.ID)
 	return createMessage.ID.String()
 }
 
@@ -112,13 +112,13 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 	if err != nil {
 		return
 	}
-	slog.Info("got channel", "channel", channel.Name())
+	dlog.Info("got channel", "channel", channel.Name())
 
 	messageContent := event.Message.Content
 	if channel.Type() == discord.ChannelTypeGuildPublicThread {
 		var process Process
 		thread := channel.(discord.GuildThread)
-		slog.Info("Got thread", "ID", thread.ID())
+		dlog.Info("Got thread", "ID", thread.ID())
 		if thread.ParentID().String() == "1252536839886082109" {
 			process = func(message, messageId, memberId, threadId string) string {
 				botState, botStateOk := event.Client().Caches().VoiceState(event.GuildID, event.Client().ApplicationID())
@@ -143,7 +143,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 				response := cohere.Send(message+"(respond like you are whispering)", event.MessageID.String(), authorId.String(), thread.ID().String())
 				audioProvider, err := elevenlabs.TTS(response)
 				if err != nil {
-					slog.Error("Failed to send speech", "err", err)
+					dlog.Error("Failed to send speech", "err", err)
 					panic(err)
 				}
 				if botStateOk {
@@ -156,7 +156,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 				conn := event.Client().VoiceManager().CreateConn(event.GuildID)
 				err = conn.Open(ctx, *botState.ChannelID, false, false)
 				if err != nil {
-					slog.Error("Failed to open voice channel", "channel", event.GuildID, "error", err)
+					dlog.Error("Failed to open voice channel", "channel", event.GuildID, "error", err)
 					panic(err)
 				}
 				conn.SetOpusFrameProvider(audioProvider)
@@ -188,7 +188,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 
 		newThread, err := restClient.CreateThreadFromMessage(channel.ID(), event.MessageID, discord.ThreadCreateFromMessage{Name: threadName, AutoArchiveDuration: 1440})
 		if err != nil {
-			slog.Error("could not create discord thread", err.Error())
+			dlog.Error("could not create discord thread", err.Error())
 			panic(err)
 		}
 
@@ -198,8 +198,8 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 
 func botIsUpReadyHandler(event *events.Ready) {
 	user, _ := event.Client().Caches().SelfUser()
-	slog.Info("Bot is up!")
-	slog.Info("Bot", "username", user.Username)
+	dlog.Info("Bot is up!")
+	dlog.Info("Bot", "username", user.Username)
 	hostname, err := os.Hostname()
 	if err != nil {
 		panic(err)
@@ -219,7 +219,7 @@ func botIsUpReadyHandler(event *events.Ready) {
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("Created message", "ID", message.ID.String(), "content", message.Content)
+	dlog.Info("Created message", "ID", message.ID.String(), "content", message.Content)
 }
 func GetLocalIPs() ([]net.IP, error) {
 	var ips []net.IP
@@ -253,17 +253,17 @@ func replyText(channelId snowflake.ID, content, messageId, authorId string, proc
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("updated message:", "ID", updateMessage.ID.String())
+	dlog.Info("updated message:", "ID", updateMessage.ID.String())
 }
 
 type Process func(message, messageId, userId, threadId string) string
 
 func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 	if event.Member.User.ID == Client().ID() {
-		slog.Info("Update on bot voice state")
+		dlog.Info("Update on bot voice state")
 		id := event.GenericGuildVoiceState.VoiceState.ChannelID
 		if id == nil {
-			slog.Info("Disconnected from voice channel")
+			dlog.Info("Disconnected from voice channel")
 			deepgram.Stop()
 			return
 		}
@@ -274,7 +274,7 @@ func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 func isCallingMe(message string) bool {
 	message = strings.ToLower(message)
 	prefixes := []string{"luna", "hey luna", "hello luna", "hello, luna", "you luna", "ya luna", "ola luna", "luna hello", "luna, hello"}
-	slog.Info("detecting message", "message", message)
+	dlog.Info("detecting message", "message", message)
 	for _, prefix := range prefixes {
 		if strings.HasPrefix(message, prefix) {
 			return true

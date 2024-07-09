@@ -5,9 +5,9 @@ import (
 	"fmt"
 	cohere "github.com/cohere-ai/cohere-go/v2"
 	"github.com/cohere-ai/cohere-go/v2/client"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
 	"log"
-	"log/slog"
 	"os"
 	"strings"
 )
@@ -65,7 +65,7 @@ func chat(message, messageId, userId, conversationId string) string {
 		log.Fatal(err)
 		return "Something wrong happened contact Admin"
 	}
-	slog.Debug("Response from cohere", "resp", fmt.Sprintf("%+v", resp))
+	dlog.Debug("Response from cohere", "resp", fmt.Sprintf("%+v", resp))
 	if resp.ToolCalls != nil {
 		request.ToolResults = make([]*cohere.ToolResult, len(resp.ToolCalls))
 		for index, toolCall := range resp.ToolCalls {

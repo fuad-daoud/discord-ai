@@ -7,3 +7,4 @@ neo4j
 .idea
 cloud/rendered
 cloud/charts
+/logs/

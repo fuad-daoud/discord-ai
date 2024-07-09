@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fuad-daoud/discord-ai/integrations/elevenlabs/ffmpeg"
-	"log/slog"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"net/http"
 	"os"
 	"strings"
@@ -43,9 +43,9 @@ func TTS(text string) (*ffmpeg.AudioProvider, error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("xi-api-key", os.Getenv("ELVENLABS_API_KEY"))
 
-	slog.Info("Sending request to elevenlabs.io")
+	dlog.Info("Sending request to elevenlabs.io")
 	res, err := http.DefaultClient.Do(req)
-	slog.Info("Got response from elevenlabs.io")
+	dlog.Info("Got response from elevenlabs.io")
 	if err != nil {
 		return nil, err
 	}

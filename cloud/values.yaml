@@ -1,7 +1,6 @@
 name: discord-ai
 script: 'run'
 cwd: '/root/discord-ai'
-interpreter: '/bin/bash'
 exec_mode: 'fork'
 instances: '1'
 max_memory_restart: '260M'

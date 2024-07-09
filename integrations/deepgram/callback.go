@@ -2,8 +2,8 @@ package deepgram
 
 import (
 	api "github.com/deepgram/deepgram-go-sdk/pkg/api/live/v1/interfaces"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"log"
-	"log/slog"
 	"strings"
 )
 
@@ -19,9 +19,9 @@ func (c *MyCallback) Message(mr *api.MessageResponse) error {
 		return nil
 	}
 
-	slog.Info("Deepgram", "Link", mr.Channel.Alternatives[0].Confidence, "sentence", sentence)
-	slog.Info("Deepgram", "isFinal", mr.IsFinal)
-	slog.Info("Deepgram", "isSpeachFinal", mr.SpeechFinal)
+	dlog.Info("Deepgram", "Link", mr.Channel.Alternatives[0].Confidence, "sentence", sentence)
+	dlog.Info("Deepgram", "isFinal", mr.IsFinal)
+	dlog.Info("Deepgram", "isSpeachFinal", mr.SpeechFinal)
 	c.Builder.WriteString(sentence)
 	c.sentence = sentence
 	if mr.SpeechFinal {
@@ -51,22 +51,22 @@ func (c *MyCallback) UnhandledEvent(byData []byte) error {
 }
 
 func (c *MyCallback) Metadata(md *api.MetadataResponse) error {
-	slog.Info("[Metadata] Received")
-	slog.Info("Metadata", "RequestID", strings.TrimSpace(md.RequestID))
-	slog.Info("Metadata", "Channels", md.Channels)
-	slog.Info("Metadata", "Created", strings.TrimSpace(md.Created))
+	dlog.Info("[Metadata] Received")
+	dlog.Info("Metadata", "RequestID", strings.TrimSpace(md.RequestID))
+	dlog.Info("Metadata", "Channels", md.Channels)
+	dlog.Info("Metadata", "Created", strings.TrimSpace(md.Created))
 	return nil
 }
 
 func (c *MyCallback) UtteranceEnd(ur *api.UtteranceEndResponse) error {
-	slog.Info("[UtteranceEnd] Received")
+	dlog.Info("[UtteranceEnd] Received")
 	return nil
 }
 
 func (c *MyCallback) Error(er *api.ErrorResponse) error {
-	slog.Error("[Error] Received")
-	slog.Error("", "Type", er.Type)
-	slog.Error("", "Message", er.Message)
-	slog.Error("", "Description", er.Description)
+	dlog.Error("[Error] Received")
+	dlog.Error("", "Type", er.Type)
+	dlog.Error("", "Message", er.Message)
+	dlog.Error("", "Description", er.Description)
 	return nil
 }

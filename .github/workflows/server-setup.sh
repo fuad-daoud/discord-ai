@@ -10,7 +10,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/too
 apt install nodejs --yes
 apt install npm --yes
 apt install tree --yes
-
+timedatectl set-timezone Asia/Amman
 
 echo "${PREFIX}ADDING zsh-history-enquirer${RESET}"
 npm i -g zsh-history-enquirer
@@ -67,3 +67,5 @@ echo "${PREFIX}FINISHED ALL TASKS${RESET}"
 #https://pm2.keymetrics.io/docs/usage/expose/
 
 #https://pm2.io/docs/enterprise/collector/go/
+
+#https://dusted.codes/creating-a-pretty-console-logger-using-gos-slog-package

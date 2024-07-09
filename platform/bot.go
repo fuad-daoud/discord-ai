@@ -7,8 +7,8 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/rest"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
-	"log/slog"
 	"os"
 )
 
@@ -35,7 +35,7 @@ func Setup() {
 		),
 
 		//bot.WithEventListenerFunc(func(event *events.GenericEvent) {
-		//	slog.Info("Triggered event", reflect.TypeOf(event))
+		//	dlog.Info("Triggered event", reflect.TypeOf(event))
 		//}),
 
 		bot.WithEventListenerFunc(dbReadyHandler),
@@ -65,7 +65,7 @@ type Handler struct {
 }
 
 func (h Handler) OnEvent(event bot.Event) {
-	slog.Info("update client")
+	dlog.Info("update client")
 	c := event.Client()
 	client = &c
 }
@@ -87,5 +87,5 @@ func Cache() cache.Caches {
 
 func Close() {
 	(*client).Close(context.TODO())
-	slog.Info("disgo close successfully")
+	dlog.Info("disgo close successfully")
 }
