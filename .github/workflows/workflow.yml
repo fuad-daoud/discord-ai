@@ -93,9 +93,16 @@ jobs:
     needs: [ deploy ]
     if: github.ref_type != 'tag'
     steps:
-      - name: pm2 stop service
-        run: something something
-      - name: delete files
-        run: rm -rf something something
+      - name: executing remote ssh commands using password
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          script: whoami
+#      - name: pm2 stop service
+#        run: something something
+#      - name: delete files
+#        run: rm -rf something something
 
 
