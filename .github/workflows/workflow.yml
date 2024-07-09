@@ -94,9 +94,9 @@ jobs:
     needs: [ deploy ]
     if: github.ref_type != 'tag'
     steps:
-      name: pm2 stop service
-      run: something something
-      name: delete files
-      run: rm -rf something something
+      - name: pm2 stop service
+        run: something something
+      - name: delete files
+        run: rm -rf something something
 
 
