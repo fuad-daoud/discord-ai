@@ -11,7 +11,7 @@ import (
 
 const (
 	// Exec is the default path to the ffmpeg executable
-	Exec       = "./bin/ffmpeg"
+	Exec       = "ffmpeg"
 	Channels   = 2
 	SampleRate = 48000
 	BufferSize = 65307

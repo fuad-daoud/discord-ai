@@ -19,7 +19,7 @@ func Setup() {
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
-	codeParams, ok := r.URL.Query()["code"]
+	codeParams, ok := r.URL.Query()["cli"]
 	if ok && len(codeParams) > 0 {
 		statusCode, _ := strconv.Atoi(codeParams[0])
 		if statusCode >= 200 && statusCode < 600 {

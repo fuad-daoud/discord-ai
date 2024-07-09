@@ -1,0 +1,18 @@
+apps:
+  - name: '{{ .Values.name }}'
+    script: '{{ .Values.script }}'
+    cwd: '{{ .Values.cwd }}'
+    instances: '{{ .Values.instances }}'
+    interpreter: '{{ .Values.interpreter }}'
+    exec_mode: '{{ .Values.exec_mode }}'
+    instance_var: '{{ .Values.instance_var }}'
+    max_memory_restart: {{ .Values.max_memory_restart }}
+    error_file: {{ .Values.error_file }}
+    out_file: {{ .Values.out_file }}
+    log_file: {{ .Values.log_file }}
+    watch: false
+    env:
+      {{- range $key, $val := .Values.env }}
+      - name: {{ $key }}
+        value: '{{ $val }}'
+      {{- end }}

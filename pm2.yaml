@@ -1,0 +1,11 @@
+apps:
+  - name: 'discord-ai'
+    script: 'apps/http.js'
+    instances: 'max'
+    max_memory_restart: '260M'
+    watch: true
+    ignore_watch: [ 'node_modules' ]
+    env:
+      NODE_ENV: 'development'
+    env_production:
+      NODE_ENV: 'production'

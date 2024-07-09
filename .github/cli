@@ -1,0 +1,22 @@
+gcloud compute instances create-with-container discord-ai \
+    --project=digitallands-project \
+    --zone=us-central1-a \
+    --machine-type=e2-micro \
+    --network-interface=network-tier=PREMIUM,stack-type=IPV4_ONLY,subnet=default \
+    --maintenance-policy=MIGRATE \
+    --provisioning-model=STANDARD \
+    --service-account=981651558497-compute@developer.gserviceaccount.com \
+    --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
+    --tags=http-server,https-server,lb-health-check \
+    --image=projects/cos-cloud/global/images/cos-stable-113-18244-85-49 \
+    --boot-disk-size=10GB \
+    --boot-disk-type=pd-standard \
+    --boot-disk-device-name=instance-20240708-115833 \
+    --container-image=europe-west8-docker.pkg.dev/digitallands-project/docker/discord-ai:a5968e4ea6c4b2bba831ca5c09bdb354e5002b7d \
+    --container-restart-policy=always \
+    --container-env=CLIENT_ID=1250722905734778904,CLIENT_SECRET=s8Ga5BH1jz4vGqNKluny_dgofukG773o,DEEPGRAM_API_KEY=b3e84a4a52bf9a59b9be90b1fe40af900adaef52,ELVENLABS_API_KEY=sk_e2438353e4b9a4b8c11242f4649e4c716101e0682b65cfa1,NEO4J_DATABASE_PASSWORD=uwFngqF26DH9eDkN7JPJy0HxuSWoh5dVWkCSY4igUdY,NEO4J_DATABASE_URL=neo4j\+s://8081da8a.databases.neo4j.io:7687,NEO4J_DATABASE_USER=neo4j,OPENAI_API_KEY=sk-proj-AsgPdFnfbcgSNTBdZivIT3BlbkFJPVWizOOQqwPygX2ctH78,TOKEN=MTI1MzI4NjI0MzY4NTYzMDAyNA.G6aw13.X4Vg9L9BfRWkNJcVgSbcLnqe_GbKoydkhJ9krw \
+    --no-shielded-secure-boot \
+    --shielded-vtpm \
+    --shielded-integrity-monitoring \
+    --labels=goog-ec-src=vm_add-gcloud,container-vm=cos-stable-113-18244-85-49 \
+    --threads-per-core=2
