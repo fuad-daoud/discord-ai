@@ -60,7 +60,7 @@ jobs:
           helm template cloud --output-dir cloud/rendered \
             --set name=${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
             --set script="/root/${{ vars.SERVICE }}/${{ github.ref_name }}/run" \
-            --set cwd=${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
+            --set cwd="/root/${{ vars.SERVICE }}/${{ github.ref_name }}" \
             --set env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
             --set env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
             --set env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
