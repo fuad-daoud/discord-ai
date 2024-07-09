@@ -90,8 +90,6 @@ jobs:
           username: root
           password: 1234Test
           script: pm2 start /root/${{ vars.SERVICE }}/${{ github.ref_name }}/pm2.yaml
-#      - name: pm2 start pm2.yaml file in the server
-#        run: something something
   cleanup:
     permissions:
       contents: 'read'
@@ -107,10 +105,7 @@ jobs:
           username: root
           password: 1234Test
           script: |
-            pm2 stop 0
-#      - name: pm2 stop service
-#        run: something something
-#      - name: delete files
-#        run: rm -rf something something
+            pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}
+            rm -rf /root/${{ vars.SERVICE }}/${{ github.ref_name }}
 
 
