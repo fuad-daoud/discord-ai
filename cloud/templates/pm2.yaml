@@ -13,6 +13,5 @@ apps:
     watch: false
     env:
       {{- range $key, $val := .Values.env }}
-      - name: {{ $key }}
-        value: '{{ $val }}'
+      {{ $key }}: '{{ $val }}'
       {{- end }}

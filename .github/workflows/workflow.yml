@@ -7,7 +7,7 @@ on:
     tags: [ "*" ]
 
 jobs:
-  docker-build-upload:
+  go-build-upload:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repo
@@ -81,10 +81,7 @@ jobs:
           overwrite: true
   deploy:
     runs-on: ubuntu-latest
-    needs: [ docker-build-upload, helm ]
-    permissions:
-      contents: 'read'
-      id-token: 'write'
+    needs: [ go-build-upload, helm ]
     steps:
       - name: pm2 start pm2.yaml file in the server
         run: something something
