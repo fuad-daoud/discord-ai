@@ -89,7 +89,7 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          script: whoami
+          script: pm2 start /root/${{ vars.SERVICE }}/${{ github.ref_name }}/pm2.yaml
 #      - name: pm2 start pm2.yaml file in the server
 #        run: something something
   cleanup:
@@ -106,7 +106,8 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          script: whoami
+          script: |
+            pm2 stop 0
 #      - name: pm2 stop service
 #        run: something something
 #      - name: delete files
