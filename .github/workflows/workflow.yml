@@ -21,9 +21,9 @@ jobs:
       - name: Display Go version
         run: go version
       - name: download dependencies
-        run: go mod download
+        run: go mod -v -x download
       - name: build binary
-        uses: go build -o "./bin/run" "./cmd/ai/main/main.go"
+        run: go build -v -x -o "./bin/run" "./cmd/ai/main/main.go"
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
