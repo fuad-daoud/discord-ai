@@ -76,7 +76,7 @@ jobs:
           password: 1234Test
           source: ${{ github.workspace }}/cloud/rendered/cloud/templates/pm2.yaml
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-          strip_components: 7
+          strip_components: 6
           overwrite: true
   deploy:
     runs-on: ubuntu-latest
