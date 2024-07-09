@@ -9,6 +9,8 @@ chsh -s $(which zsh)
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 apt install nodejs --yes
 apt install npm --yes
+apt install tree --yes
+
 
 echo "${PREFIX}ADDING zsh-history-enquirer${RESET}"
 npm i -g zsh-history-enquirer
