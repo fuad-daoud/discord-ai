@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"net/http"
+	"os"
 	"strconv"
 )
 
 func Setup() {
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/status", statusHandler)
-	err := http.ListenAndServe(":8080", nil)
+	port := os.Getenv("PORT")
+	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
-		dlog.Error("Could not serve on 8080")
+		dlog.Error("Could not serve on " + port)
 		panic(err)
 	}
 }
