@@ -92,7 +92,6 @@ jobs:
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
-            - name: restore cache
 #      - name: add to artifacts
 #        uses: actions/cache@v4
 #        with:
