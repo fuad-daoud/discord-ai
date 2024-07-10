@@ -107,6 +107,5 @@ jobs:
   call_deploy:
     uses: fuad-daoud/discord-ai/.github/workflows/deploy.yml@14-use-elven-labs-instead-of-deepgram-for-text-to-speech
     needs: [helm, build]
-    if: github.ref_type != 'tag'
     with:
-      cleanup: true
+      cleanup: ${{ github.ref_type != 'tag' }}
