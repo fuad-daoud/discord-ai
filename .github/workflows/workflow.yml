@@ -106,6 +106,8 @@ jobs:
           fail-on-cache-miss: true
           path: /home/runner/artifacts
           key: artifacts-${{ github.ref_name }}
+      - name: ls cache
+        run: tree -aI /home/runner/artifacts
       - name: scp binary to server
         uses: appleboy/scp-action@v0.1.7
         with:
