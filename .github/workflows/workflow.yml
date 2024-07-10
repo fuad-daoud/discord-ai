@@ -77,7 +77,7 @@ jobs:
             --set env.DEEPGRAM_API_KEY=${{ vars.DEEPGRAM_API_KEY }} \
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
-            --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
+            --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }}
           mkdir -p ${{ github.workspace }}/config/ \
           mv cloud/rendered/cloud/templates/pm2.yaml ${{ github.workspace }}/config/
       - name: cache config
