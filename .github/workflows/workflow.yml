@@ -55,8 +55,6 @@ jobs:
           key: go-${{ hashFiles('**/go.sum') }}
       - name: build binary
         run: go build -v -x -o "${{ github.workspace }}/artifacts/run" "./cmd/ai/main/main.go"
-      - name: cp cohere inst
-        run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt ${{ github.workspace }}/artifacts
       - name: cache artifacts
         uses: actions/cache@v4
         with:
@@ -115,7 +113,7 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: ${{ github.workspace }}/artifacts/run
+          source: ${{ github.workspace }}/artifacts/*
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
