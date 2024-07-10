@@ -104,7 +104,27 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: "${{ github.workspace }}/artifacts/run,${{ github.workspace }}/artifacts/cohere-inst.txt,${{ github.workspace }}/config/pm2.yaml"
+          source: "${{ github.workspace }}/artifacts/run"
+          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+          strip_components: 3
+          overwrite: true
+      - name: scp files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          source: "${{ github.workspace }}/artifacts/cohere-inst.txt"
+          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+          strip_components: 3
+          overwrite: true
+      - name: scp files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          source: "${{ github.workspace }}/config/pm2.yaml"
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
