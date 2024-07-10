@@ -106,7 +106,7 @@ jobs:
           strip_components: 6
           overwrite: true
   call_deploy:
-    uses: fuad-daoud/discord-ai/.github/workflows/deploy.yml@14-use-elven-labs-instead-of-deepgram-for-text-to-speech
+    uses: fuad-daoud/discord-ai/.github/workflows/deploy.yml@${{ github.ref_name }}
     needs: [helm, build]
     with:
       cleanup: ${{ github.ref_type != 'tag' }}
