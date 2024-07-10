@@ -115,7 +115,7 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: /home/runner/artifacts/run,/home/runner/artifacts/cohere-inst.txt
+          source: /home/runner/artifacts/run
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
