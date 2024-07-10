@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /home/runner/artifacts
-          key: ${{ runner.os }}-run-${{ hashFiles(github.ref_name) }}
+          key: artifacts-${{ github.ref_name }}
 
   helm:
     runs-on: ubuntu-latest
@@ -105,7 +105,7 @@ jobs:
         with:
           fail-on-cache-miss: true
           path: /home/runner/artifacts
-          key: ${{ runner.os }}-run-${{ hashFiles(github.ref_name) }}
+          key: artifacts-${{ github.ref_name }}
       - name: scp binary to server
         uses: appleboy/scp-action@v0.1.7
         with:
