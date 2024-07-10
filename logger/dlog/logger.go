@@ -1,7 +1,8 @@
 package dlog
 
 import (
-	"github.com/fuad-daoud/discord-ai/cmd/test4/prettylog"
+	"github.com/fuad-daoud/discord-ai/logger/dlog/prettylog"
+	"github.com/robfig/cron/v3"
 	slogmulti "github.com/samber/slog-multi"
 	"io"
 	"log/slog"
@@ -9,10 +10,19 @@ import (
 )
 
 var multiLogger *slog.Logger
+var archiver = &Archiver{}
 
 func init() {
 	setup()
 	multiLogger = createLogger()
+
+	c := cron.New()
+	entryID, err := c.AddFunc(os.Getenv("ARCHIVE_CRON"), archiver.process)
+	if err != nil {
+		panic(err)
+	}
+	c.Start()
+	Info("Created cron ", "entryID", entryID)
 }
 
 func Info(msg string, args ...any) {
@@ -48,8 +58,6 @@ func createLogger() *slog.Logger {
 	}
 
 	os.MkdirAll("logs/buffered", os.ModePerm)
-
-	archiver := &Archiver{}
 
 	return slog.New(slogmulti.Fanout(
 		getPrettyHandler(archiver, opts),
@@ -101,6 +109,7 @@ func getPrettyHandler(archiver *Archiver, opts *slog.HandlerOptions) *prettylog.
 	if err != nil {
 		panic(err)
 	}
+
 	return prettylog.NewHandler(&DualWriter{
 		stdout: os.Stdout,
 		file: &BufferedFile{

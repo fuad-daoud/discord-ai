@@ -94,6 +94,7 @@ jobs:
             --set env.DEEPGRAM_API_KEY=${{ vars.DEEPGRAM_API_KEY }} \
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
+            --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
       - name: scp config to server
         uses: appleboy/scp-action@v0.1.7
         with:
