@@ -56,6 +56,16 @@ jobs:
             target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
             strip_components: 3
             overwrite: true
+        - name: scp cohere inst
+          uses: appleboy/scp-action@v0.1.7
+          with:
+            host: 165.22.92.220
+            username: root
+            password: 1234Test
+            source: ${{ github.workspace }}/integrations/cohere/cohere-inst.txt
+            target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+            strip_components: 4
+            overwrite: true
   helm:
     runs-on: ubuntu-latest
     container: alpine/helm:3.15.2
@@ -94,18 +104,9 @@ jobs:
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 6
           overwrite: true
-      - name: scp cohere inst
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: 165.22.92.220
-          username: root
-          password: 1234Test
-          source: ${{ github.workspace }}/integrations/cohere/cohere-inst.txt
-          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-          strip_components: 4
-          overwrite: true
   call_deploy:
     uses: fuad-daoud/discord-ai/.github/workflows/deploy.yml@14-use-elven-labs-instead-of-deepgram-for-text-to-speech
+    needs: [helm, build]
     if: github.ref_type != 'tag'
     with:
       cleanup: true
