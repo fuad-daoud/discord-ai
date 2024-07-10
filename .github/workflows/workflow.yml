@@ -56,6 +56,8 @@ jobs:
       strip_components: 3
   helm:
     runs-on: ubuntu-latest
+    outputs:
+      config: ${{ steps.moving.outputs.config }}
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v4
@@ -84,7 +86,11 @@ jobs:
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }}
       - name: Moving
-        run: mkdir --parents ${{ github.workspace }}/config; mv cloud/rendered/cloud/templates/pm2.yaml $_
+        id: moving
+        run: |
+          mkdir --parents ${{ github.workspace }}/config; mv cloud/rendered/cloud/templates/pm2.yaml $_
+          echo "config=${{ github.workspace }}/config" >> "$GITHUB_OUTPUT"
+
       - name: cache config
         uses: actions/cache/save@v4
         with:
@@ -94,7 +100,7 @@ jobs:
     uses: ./.github/workflows/upload.yml
     needs: [ helm ]
     with:
-      path: /home/runner/work/discord-ai/discord-ai/config
+      path: ${{ needs.helm.outputs.config }}
       key: config-${{ github.sha }}
       strip_components: 3
   call_deploy:

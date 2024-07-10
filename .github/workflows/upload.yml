@@ -63,5 +63,7 @@ jobs:
           strip_components: ${{ inputs.strip_components }}
           overwrite: true
       - name: cleanup
+        env:
+          GH_TOKEN: ${{ github.token }}
         if: inputs.cleanup == true
         run: gh cache delete ${{ inputs.key }}
