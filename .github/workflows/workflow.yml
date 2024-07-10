@@ -48,6 +48,8 @@ jobs:
             service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
   upload_artifacts:
+    permissions:
+      actions: write
     uses: ./.github/workflows/upload.yml
     needs: [ build, pause ]
     with:
@@ -97,6 +99,8 @@ jobs:
           path: ${{ github.workspace }}/config
           key: config-${{ github.sha }}
   upload_config:
+    permissions:
+      actions: write
     uses: ./.github/workflows/upload.yml
     needs: [ helm ]
     with:
