@@ -77,7 +77,7 @@ jobs:
           username: root
           password: 1234Test
           script: |
-            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status') \
+            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
 
   upload:
