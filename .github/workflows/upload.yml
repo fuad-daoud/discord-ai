@@ -46,14 +46,12 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
-      - name: restore cache
-        uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v4
         with:
           fail-on-cache-miss: true
           path: ${{ inputs.path }}
           key: ${{ inputs.key }}
-      - name: scp files to server
-        uses: appleboy/scp-action@v0.1.7
+      - uses: appleboy/scp-action@v0.1.7
         with:
           host: 165.22.92.220
           username: root
@@ -62,6 +60,9 @@ jobs:
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: ${{ inputs.strip_components }}
           overwrite: true
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: 'no_files'
       - name: cleanup
         env:
           GH_TOKEN: ${{ github.token }}
