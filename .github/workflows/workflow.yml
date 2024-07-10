@@ -79,9 +79,7 @@ jobs:
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }}
       - name: Moving
-        run: |
-          mkdir config/ \
-          mv cloud/rendered/cloud/templates/pm2.yaml config/
+        run: mkdir config
       - name: cache config
         uses: actions/cache/save@v4
         with:
