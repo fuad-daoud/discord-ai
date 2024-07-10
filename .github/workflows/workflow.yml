@@ -77,7 +77,7 @@ jobs:
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
       - name: Moving
         run: |
-          mkdir ${{ github.workspace }}/config/
+          mkdir -p ${{ github.workspace }}/config/
           mv cloud/rendered/cloud/templates/pm2.yaml ${{ github.workspace }}/config/
       - name: caching config
         uses: actions/cache@v4
