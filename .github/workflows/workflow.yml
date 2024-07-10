@@ -62,6 +62,8 @@ jobs:
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }}
       - name: Moving
         run: mkdir --parents ${{ github.workspace }}/config; mv cloud/rendered/cloud/templates/pm2.yaml $_
+      - name: ls
+        run: tree
       - name: cache config
         uses: actions/cache/save@v4
         with:
