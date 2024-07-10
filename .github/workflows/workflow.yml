@@ -104,7 +104,7 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: "${{ github.workspace }}/artifacts/*,${{ github.workspace }}/config/*"
+          source: "${{ github.workspace }}/artifacts/run,${{ github.workspace }}/artifacts/cohere-inst.txt,${{ github.workspace }}/config/pm2.yaml"
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
