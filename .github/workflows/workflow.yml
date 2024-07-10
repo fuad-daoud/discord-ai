@@ -106,7 +106,23 @@ jobs:
           strip_components: 6
           overwrite: true
   call_deploy:
-    uses: fuad-daoud/discord-ai/.github/workflows/deploy.yml@${{ github.ref_name }}
+    uses: fuad-daoud/discord-ai/.github/workflows/deploy.yml@${{github.ref_name}}
     needs: [helm, build]
     with:
       cleanup: ${{ github.ref_type != 'tag' }}
+
+
+### What's Changed
+#  * Update readme by @fuad-daoud in https://github.com/fuad-daoud/discord-ai/pull/11
+#  * 14 use elven labs instead of deepgram for text to speech by @fuad-daoud in https://github.com/fuad-daoud/discord-ai/pull/15
+#
+#changes:
+#  * Updated readme
+#  * Added elevenlabs
+#  * Refactored github actions
+#  * Moved from gcloud cloud run to digital ocean droplets
+#  * Reworked logs, logging to multiple files in multiple formats and added an archive cron
+#
+#
+#
+#  **Full Changelog**: https://github.com/fuad-daoud/discord-ai/compare/v0.0.5...v0.0.6
