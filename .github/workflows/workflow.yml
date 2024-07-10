@@ -107,7 +107,7 @@ jobs:
         uses: actions/cache@v4
         with:
           fail-on-cache-miss: true
-          path: /home/runner/artifacts
+          path: ${{ github.workspace }}/artifacts
           key: artifacts-${{ github.sha }}
       - name: scp files to server
         uses: appleboy/scp-action@v0.1.7
@@ -115,7 +115,7 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: /home/runner/artifacts/run
+          source: ${{ github.workspace }}/artifacts/run
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
