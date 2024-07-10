@@ -15,7 +15,7 @@ jobs:
         with:
           show-progress: true
       - name: check cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         id: cache
         with:
           path: |
@@ -28,12 +28,11 @@ jobs:
           go-version: '1.22.x'
       - name: Display Go version
         run: go version
-
       - name: download dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: go mod download
       - name: cache
-        uses: actions/cache@v4
+        uses: actions/cache/save@v4
         if: steps.cache.outputs.cache-hit != 'true'
         with:
           path: |
@@ -43,7 +42,7 @@ jobs:
       - name: build binary
         run: go build -v -x -o "${{ github.workspace }}/artifacts/run" "./cmd/ai/main/main.go"
       - name: cache artifacts
-        uses: actions/cache@v4
+        uses: actions/cache/save@v4
         with:
           path: ${{ github.workspace }}/artifacts
           key: artifacts-${{ github.sha }}
@@ -82,7 +81,7 @@ jobs:
           mkdir -p ${{ github.workspace }}/config/
           mv cloud/rendered/cloud/templates/pm2.yaml ${{ github.workspace }}/config/
       - name: cache config
-        uses: actions/cache@v4
+        uses: actions/cache/save@v4
         with:
           path: ${{ github.workspace }}/config
           key: config-${{ github.sha }}
@@ -106,13 +105,13 @@ jobs:
     needs: [pause]
     steps:
       - name: restore cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           fail-on-cache-miss: true
           path: ${{ github.workspace }}/artifacts
           key: artifacts-${{ github.sha }}
       - name: restore cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           fail-on-cache-miss: true
           path: ${{ github.workspace }}/config
