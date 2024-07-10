@@ -7,44 +7,65 @@ on:
     tags: [ "*" ]
 
 jobs:
-  docker-build-upload:
+  setup:
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
     steps:
-      - name: Checkout the repo
-        uses: actions/checkout@v4
+      - name: stop service if running
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          show-progress: true
-      - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag "${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
-      - name: Slim
-        uses: kitabisa/docker-slim-action@v1
-        env:
-          DSLIM_HTTP_PROBE: false
-          DSLIM_INCLUDE_PATH: "/etc/ssl/certs/"
-          DSLIM_INCLUDE_WORKDIR: true
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          script: |
+            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
+            if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
 
-        with:
-          target: "${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
-          overwrite: true
-      - name: Authenticate with Google Cloud
-        uses: 'google-github-actions/auth@v2'
-        id: auth
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
-          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-      - name: Login to Artifact Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.REGION }}-docker.pkg.dev
-          username: oauth2accesstoken
-          password: ${{ steps.auth.outputs.access_token }}
-      - name: upload
-        run: docker push ${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+
+  build:
+      runs-on: ubuntu-latest
+      needs: [setup]
+      steps:
+        - name: Checkout the repo
+          uses: actions/checkout@v4
+          with:
+            show-progress: true
+        - name: Setup Go 1.22.x
+          uses: actions/setup-go@v5
+          with:
+            go-version: '1.22.x'
+        - name: Display Go version
+          run: go version
+        - name: download dependencies
+          run: go mod download
+        - name: build binary
+          run: go build -v -x -o "./bin/run" "./cmd/ai/main/main.go"
+        - name: Upload binary
+          uses: actions/upload-artifact@v4
+          with:
+            name: "run-${{ github.ref_name }}"
+            path: ${{ github.workspace }}/bin/run
+            retention-days: 7
+            if-no-files-found: error
+        - name: scp binary to server
+          uses: appleboy/scp-action@v0.1.7
+          with:
+            host: 165.22.92.220
+            username: root
+            password: 1234Test
+            source: ${{ github.workspace }}/bin/run
+            target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+            strip_components: 3
+            overwrite: true
+        - name: scp cohere inst
+          uses: appleboy/scp-action@v0.1.7
+          with:
+            host: 165.22.92.220
+            username: root
+            password: 1234Test
+            source: ${{ github.workspace }}/integrations/cohere/cohere-inst.txt
+            target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+            strip_components: 4
+            overwrite: true
   helm:
     runs-on: ubuntu-latest
     container: alpine/helm:3.15.2
@@ -61,75 +82,31 @@ jobs:
       - name: Templating
         run: |
           helm template cloud --output-dir cloud/rendered \
-            --set metadata.location=${{ vars.REGION }} \
-            --set metadata.name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
-            --set spec.image=${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }} \
-            --set spec.env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
-            --set spec.env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
-            --set spec.env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
-            --set spec.env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
-            --set spec.env.CLIENT_ID=${{ vars.CLIENT_ID }} \
-            --set spec.env.CLIENT_SECRET=${{ vars.CLIENT_SECRET }} \
-            --set spec.env.DEEPGRAM_API_KEY=${{ vars.DEEPGRAM_API_KEY }} \
-            --set spec.env.OPENAI_API_KEY=${{ vars.OPENAI_API_KEY }} \
-      - name: Upload service yaml
-        uses: actions/upload-artifact@v4
+            --set name=${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
+            --set script="/root/${{ vars.SERVICE }}/${{ github.ref_name }}/run" \
+            --set cwd="/root/${{ vars.SERVICE }}/${{ github.ref_name }}" \
+            --set env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
+            --set env.NEO4J_DATABASE_URL=${{ vars.NEO4J_DATABASE_URL }} \
+            --set env.NEO4J_DATABASE_USER=${{ vars.NEO4J_DATABASE_USER }} \
+            --set env.NEO4J_DATABASE_PASSWORD=${{ vars.NEO4J_DATABASE_PASSWORD }} \
+            --set env.CLIENT_ID=${{ vars.CLIENT_ID }} \
+            --set env.CLIENT_SECRET=${{ vars.CLIENT_SECRET }} \
+            --set env.DEEPGRAM_API_KEY=${{ vars.DEEPGRAM_API_KEY }} \
+            --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
+            --set env.COHERE_INST=${{ vars.COHERE_INST }} \
+            --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
+      - name: scp config to server
+        uses: appleboy/scp-action@v0.1.7
         with:
-          name: "service-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}.yaml"
-          path: ${{ github.workspace }}/cloud/rendered/cloud/templates/service.yaml
-          retention-days: 1
-          if-no-files-found: error
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [ docker-build-upload, helm ]
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: "service-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}.yaml"
-          path: ${{ github.workspace }}
-          merge-multiple: true
-      - name: Authenticate with Google Cloud
-        uses: 'google-github-actions/auth@v2'
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
-          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          version: '>= 482.0.0'
-      - name: Deploy cloud run
-        run: gcloud run services replace service.yaml --format json --region ${{ vars.REGION }}
-      - name: Make it public
-        run: gcloud run services add-iam-policy-binding ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --member="allUsers" --role="roles/run.invoker" --region ${{ vars.REGION }}
-      - name: Wait 30 seconds
-        run: sleep 30s
-      - name: Run curl
-        run: curl --fail $(gcloud run services describe ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --format json --region europe-west8 | jq -c -e -j .status.url)
-  cleanup:
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    runs-on: ubuntu-latest
-    needs: [ deploy ]
-    if: github.ref_type != 'tag'
-    steps:
-      - name: Authenticate with Google Cloud
-        uses: 'google-github-actions/auth@v2'
-        id: auth
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ vars.GCLOUD_PROVIDER }}
-          service_account: ${{ vars.GCLOUD_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-      - name: Remove service
-        run: gcloud run services delete ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} --region ${{ vars.REGION }} --quiet
-      - name: Remove docker image
-        run: gcloud container images delete ${{ vars.IMAGE_PATH }}:${{ github.ref_type == 'tag' && github.ref_name || github.sha }} --quiet
-
-
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          source: ${{ github.workspace }}/cloud/rendered/cloud/templates/pm2.yaml
+          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+          strip_components: 6
+          overwrite: true
+  call_deploy:
+    uses: fuad-daoud/discord-ai/.github/workflows/deploy.yml@14-use-elven-labs-instead-of-deepgram-for-text-to-speech
+    needs: [helm, build]
+    with:
+      cleanup: ${{ github.ref_type != 'tag' }}

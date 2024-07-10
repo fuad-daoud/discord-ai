@@ -1,18 +1,12 @@
-metadata:
-  name: discord-ai
-  namespace: '981651558497'
-  location: europe-west8
-spec:
-  containerConcurrency: 80
-  image: europe-west8-docker.pkg.dev/digitallands-project/docker/discord-ai:v0.1.7
-  containerPort: 8080
-  cpu: 1000m
-  memory: 128Mi
-  serviceAccountName: 981651558497-compute@developer.gserviceaccount.com
-  env:
-    TOKEN: "SOME_TOKEN"
-  metadata:
-    maxScale: '1'
-    minScale: '1'
-    execution_environment: gen1
-    startup_cpu_boost: 'true'
+name: discord-ai
+script: 'run'
+cwd: '/root/discord-ai'
+exec_mode: 'fork'
+instances: '1'
+max_memory_restart: '260M'
+instance_var: 'INSTANCE_ID'
+error_file: ./error.log
+out_file: ./out.log
+log_file: ./log.log
+env:
+  TOKEN: "SOME_TOKEN"

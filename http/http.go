@@ -2,7 +2,7 @@ package http
 
 import (
 	"fmt"
-	"log/slog"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"net/http"
 	"strconv"
 )
@@ -12,14 +12,14 @@ func Setup() {
 	http.HandleFunc("/status", statusHandler)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		slog.Error("Could not serve on 8080")
+		dlog.Error("Could not serve on 8080")
 		panic(err)
 	}
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
-	codeParams, ok := r.URL.Query()["code"]
+	codeParams, ok := r.URL.Query()["cli"]
 	if ok && len(codeParams) > 0 {
 		statusCode, _ := strconv.Atoi(codeParams[0])
 		if statusCode >= 200 && statusCode < 600 {

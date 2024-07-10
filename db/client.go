@@ -2,9 +2,9 @@ package db
 
 import "C"
 import (
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"golang.org/x/net/context"
-	"log/slog"
 	"os"
 	"strings"
 )
@@ -20,7 +20,7 @@ func InTransaction(execute TransactionExecute) {
 	session := connection.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	transaction, err := session.BeginTransaction(ctx)
 	if err != nil {
-		slog.Error("Transaction failed", "err", err)
+		dlog.Error("Transaction failed", "err", err)
 		panic(err)
 	}
 
@@ -31,10 +31,10 @@ func InTransaction(execute TransactionExecute) {
 	if err != nil {
 		err := transaction.Rollback(ctx)
 		if err != nil {
-			slog.Error("Rollback failed", "err", err)
+			dlog.Error("Rollback failed", "err", err)
 			panic(err)
 		}
-		slog.Error("Transaction failed", "err", err)
+		dlog.Error("Transaction failed", "err", err)
 		panic(err)
 	}
 }
@@ -45,10 +45,10 @@ type TransactionExecute func(write Write)
 func getTxWrite(transaction neo4j.ExplicitTransaction, ctx context.Context) Write {
 	return func(stmts ...string) neo4j.ResultWithContext {
 		stmt := strings.Join(stmts, " ")
-		slog.Info("Writing ", "stmt", stmt)
+		dlog.Info("Writing ", "stmt", stmt)
 		run, err := transaction.Run(ctx, stmt, make(map[string]any))
 		if err != nil {
-			slog.Error("Transaction run failed", "err", err)
+			dlog.Error("Transaction run failed", "err", err)
 			panic(err)
 		}
 		return run
@@ -57,10 +57,10 @@ func getTxWrite(transaction neo4j.ExplicitTransaction, ctx context.Context) Writ
 
 func Query(stmts ...string) *neo4j.EagerResult {
 	stmt := strings.Join(stmts, " ")
-	slog.Info("Querying ", "stmt", stmt)
+	dlog.Info("Querying ", "stmt", stmt)
 	result, err := neo4j.ExecuteQuery(context.Background(), connection.driver, stmt, make(map[string]any), neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"))
 	if err != nil {
-		slog.Error("Error executing query", "err", err)
+		dlog.Error("Error executing query", "err", err)
 		panic(err)
 	}
 	return result
@@ -74,16 +74,28 @@ func Connect() {
 		dbUri,
 		neo4j.BasicAuth(dbUser, dbPassword, ""))
 	if err != nil {
-		slog.Error("Error connecting to Neo4j", "err", err)
+		dlog.Error("Error connecting to Neo4j", "err", err)
 		panic(err)
 	}
 	err = driver.VerifyConnectivity(context.Background())
 	if err != nil {
-		slog.Error("Error connecting to Neo4j", "err", err)
+		dlog.Error("Error connecting to Neo4j", "err", err)
 		panic(err)
 	}
 	connection = &dbConnection{driver: driver}
-	slog.Info("Connection established.", "URI", dbUri)
+	dlog.Info("Connection established.", "URI", dbUri)
+
+	//InTransaction(func(write Write) {
+	//	hostname, err := os.Hostname()
+	//	if err != nil {
+	//		dlog.Error("Error getting hostname", "err", err)
+	//		panic(err)
+	//	}
+	//	write(cypher.MergeN("s", Server{
+	//		HostName:    hostname,
+	//		CreatedDate: time.Now().String(),
+	//	}))
+	//})
 }
 
 func Close() {
@@ -91,5 +103,5 @@ func Close() {
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("DB Connection closed.")
+	dlog.Info("DB Connection closed.")
 }

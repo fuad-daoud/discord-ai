@@ -3,9 +3,9 @@ package cypher
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/mitchellh/mapstructure"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-	"log/slog"
 	"reflect"
 	"strings"
 )
@@ -59,6 +59,10 @@ func Cypher(key string, val any) string {
 }
 
 func ToProperties(val any) string {
+	if val == nil {
+		panic("Val in ToProperties can't be nil")
+	}
+
 	m := toMap(val)
 
 	stringBuilder := strings.Builder{}
@@ -101,7 +105,7 @@ func ParseAll[KeyValue any](key string, eagerResult *neo4j.EagerResult) ([]KeyVa
 	for _, record := range eagerResult.Records {
 		get, b := record.Get(key)
 		if !b {
-			slog.Error("Invalid key", "key", key)
+			dlog.Error("Invalid key", "key", key)
 			panic("Invalid key")
 		}
 		node := get.(neo4j.Node)
@@ -122,7 +126,7 @@ func ParseKey[KeyValue any](key string, eagerResult *neo4j.EagerResult) (KeyValu
 
 	get, b := eagerResult.Records[0].Get(key)
 	if !b {
-		slog.Error("Invalid key", "key", key)
+		dlog.Error("Invalid key", "key", key)
 		panic("Invalid key")
 	}
 	node := get.(neo4j.Node)
@@ -142,7 +146,7 @@ func Parse2Key[FirstKeyValue any, SecondKeyValue any](firstKey, secondKey string
 
 	get, b := eagerResult.Records[0].Get(firstKey)
 	if !b {
-		slog.Error("Invalid key", "key", &firstKey)
+		dlog.Error("Invalid key", "key", &firstKey)
 		panic("Invalid key")
 	}
 	firstResult = parse[FirstKeyValue](get.(neo4j.Node).Props)
@@ -151,7 +155,7 @@ func Parse2Key[FirstKeyValue any, SecondKeyValue any](firstKey, secondKey string
 	}
 	get, b = eagerResult.Records[1].Get(secondKey)
 	if !b {
-		slog.Error("Invalid key", "key", secondKey)
+		dlog.Error("Invalid key", "key", secondKey)
 		panic("Invalid key")
 	}
 	secondResult = parse[SecondKeyValue](get.(neo4j.Node).Props)
@@ -162,7 +166,7 @@ func parse[RESULT any](props map[string]any) RESULT {
 	var result RESULT
 	err := mapstructure.Decode(props, &result)
 	if err != nil {
-		slog.Error("Failed to decode result", "err", err)
+		dlog.Error("Failed to decode result", "err", err)
 		panic(err)
 	}
 	return result
