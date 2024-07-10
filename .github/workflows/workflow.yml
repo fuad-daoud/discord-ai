@@ -14,12 +14,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           show-progress: true
-      - name: Setup Go 1.22.x
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22.x'
-      - name: Display Go version
-        run: go version
       - name: check cache
         uses: actions/cache@v4
         id: cache
@@ -28,11 +22,19 @@ jobs:
             ~/.cache/go-build
             ~/go/pkg/mod
           key: go-${{ hashFiles('**/go.sum') }}
+      - name: Setup Go 1.22.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      - name: Display Go version
+        run: go version
+
       - name: download dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: go mod download
       - name: cache
         uses: actions/cache@v4
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.cache/go-build
@@ -79,7 +81,7 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/config/
           mv cloud/rendered/cloud/templates/pm2.yaml ${{ github.workspace }}/config/
-      - name: caching config
+      - name: cache config
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/config
