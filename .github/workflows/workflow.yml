@@ -75,12 +75,13 @@ jobs:
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
-#      - name: add to artifacts
-#        uses: actions/cache@v4
-#        with:
-#          fail-on-cache-miss: true
-#          path: /home/runner/artifacts
-#          key: artifacts-${{ github.sha }}
+          mkdir ${{ github.workspace }}/config/
+          mv cloud/rendered/cloud/templates/pm2.yaml ${{ github.workspace }}/config/
+      - name: caching config
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/config
+          key: config-${{ github.sha }}
 
   pause:
     runs-on: ubuntu-latest
@@ -96,9 +97,6 @@ jobs:
             service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
 
-
-
-
   upload:
     runs-on: ubuntu-latest
     needs: [pause]
@@ -109,6 +107,14 @@ jobs:
           fail-on-cache-miss: true
           path: ${{ github.workspace }}/artifacts
           key: artifacts-${{ github.sha }}
+      - name: restore cache
+        uses: actions/cache@v4
+        with:
+          fail-on-cache-miss: true
+          path: ${{ github.workspace }}/config
+          key: config-${{ github.sha }}
+      - name: move config to artifacts
+        run: mv ${{ github.workspace }}/config/* ${{ github.workspace }}/artifacts/
       - name: scp files to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -119,16 +125,6 @@ jobs:
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
-#      - name: scp cohere inst
-#        uses: appleboy/scp-action@v0.1.7
-#        with:
-#          host: 165.22.92.220
-#          username: root
-#          password: 1234Test
-#          source: /artifacts/cohere-inst.txt
-#          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-#          strip_components: 4
-#          overwrite: true
   call_deploy:
     uses: ./.github/workflows/deploy.yml
     needs: [ upload ]
