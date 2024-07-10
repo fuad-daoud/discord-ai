@@ -7,8 +7,36 @@ on:
     tags: [ "*" ]
 
 jobs:
-  setup:
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      artifacts: ${{ steps.building.outputs.artifacts }}
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          show-progress: true
+      - name: Setup Go 1.22.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      - name: Display Go version
+        run: go version
+      - name: download dependencies
+        run: go mod download
+      - name: build binary
+        id: building
+        run: |
+          go build -v -x -o "${{ github.workspace }}/artifacts/run" "./cmd/ai/main/main.go"
+          echo "artifacts=${{ github.workspace }}/artifacts" >> "$GITHUB_OUTPUT"
+      - name: cache artifacts
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/artifacts
+          key: artifacts-${{ github.sha }}
+  pause:
+    runs-on: ubuntu-latest
+    needs: [ build ]
     steps:
       - name: stop service if running
         uses: appleboy/ssh-action@v1.0.3
@@ -17,58 +45,20 @@ jobs:
           username: root
           password: 1234Test
           script: |
-            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
+            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
-
-
-  build:
-      runs-on: ubuntu-latest
-      needs: [setup]
-      steps:
-        - name: Checkout the repo
-          uses: actions/checkout@v4
-          with:
-            show-progress: true
-        - name: Setup Go 1.22.x
-          uses: actions/setup-go@v5
-          with:
-            go-version: '1.22.x'
-        - name: Display Go version
-          run: go version
-        - name: download dependencies
-          run: go mod download
-        - name: build binary
-          run: go build -v -x -o "./bin/run" "./cmd/ai/main/main.go"
-        - name: Upload binary
-          uses: actions/upload-artifact@v4
-          with:
-            name: "run-${{ github.ref_name }}"
-            path: ${{ github.workspace }}/bin/run
-            retention-days: 7
-            if-no-files-found: error
-        - name: scp binary to server
-          uses: appleboy/scp-action@v0.1.7
-          with:
-            host: 165.22.92.220
-            username: root
-            password: 1234Test
-            source: ${{ github.workspace }}/bin/run
-            target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-            strip_components: 3
-            overwrite: true
-        - name: scp cohere inst
-          uses: appleboy/scp-action@v0.1.7
-          with:
-            host: 165.22.92.220
-            username: root
-            password: 1234Test
-            source: ${{ github.workspace }}/integrations/cohere/cohere-inst.txt
-            target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-            strip_components: 4
-            overwrite: true
+  upload_artifacts:
+    permissions: write-all
+    uses: ./.github/workflows/upload.yml
+    needs: [ build, pause ]
+    with:
+      path: ${{ needs.build.outputs.artifacts }}
+      key: artifacts-${{ github.sha }}
+      strip_components: 3
   helm:
     runs-on: ubuntu-latest
-    container: alpine/helm:3.15.2
+    outputs:
+      config: ${{ steps.moving.outputs.config }}
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v4
@@ -77,12 +67,13 @@ jobs:
             cloud
           sparse-checkout-cone-mode: false
           show-progress: true
+      - uses: azure/setup-helm@v4.2.0
       - name: Linting
         run: helm lint cloud
       - name: Templating
         run: |
           helm template cloud --output-dir cloud/rendered \
-            --set name=${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
+            --set name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
             --set script="/root/${{ vars.SERVICE }}/${{ github.ref_name }}/run" \
             --set cwd="/root/${{ vars.SERVICE }}/${{ github.ref_name }}" \
             --set env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
@@ -95,18 +86,28 @@ jobs:
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
-      - name: scp config to server
-        uses: appleboy/scp-action@v0.1.7
+            --set env.PORT=${{ github.ref_type == 'tag' && vars.PORT || 8081 }} \
+      - name: Moving
+        id: moving
+        run: |
+          mkdir --parents ${{ github.workspace }}/config; mv cloud/rendered/cloud/templates/pm2.yaml $_
+          echo "config=${{ github.workspace }}/config" >> "$GITHUB_OUTPUT"
+
+      - name: cache config
+        uses: actions/cache/save@v4
         with:
-          host: 165.22.92.220
-          username: root
-          password: 1234Test
-          source: ${{ github.workspace }}/cloud/rendered/cloud/templates/pm2.yaml
-          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-          strip_components: 6
-          overwrite: true
+          path: ${{ github.workspace }}/config
+          key: config-${{ github.sha }}
+  upload_config:
+    permissions: write-all
+    uses: ./.github/workflows/upload.yml
+    needs: [ helm ]
+    with:
+      path: ${{ needs.helm.outputs.config }}
+      key: config-${{ github.sha }}
+      strip_components: 3
   call_deploy:
     uses: ./.github/workflows/deploy.yml
-    needs: [helm, build]
+    needs: [ upload_config, upload_artifacts ]
     with:
       cleanup: ${{ github.ref_type != 'tag' }}

@@ -1,0 +1,71 @@
+on:
+  workflow_call:
+    inputs:
+      path:
+        type: string
+        description: Path of directory for cache and upload as source
+        required: true
+      strip_components:
+        type: number
+        description: Number of components to strip
+        default: 0
+        required: false
+      key:
+        type: string
+        description: Key for cache
+        required: true
+      cleanup:
+        type: boolean
+        description: Delete cache after uploading files
+        required: false
+        default: true
+  workflow_dispatch:
+    inputs:
+      path:
+        type: string
+        description: Path of directory for cache and upload as source
+        required: true
+      strip_components:
+        type: number
+        description: Number of components to strip
+        default: 0
+        required: false
+      key:
+        type: string
+        description: Key for cache
+        required: true
+      cleanup:
+        type: boolean
+        description: Delete cache after uploading files
+        required: false
+        default: true
+
+
+
+jobs:
+  upload:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache/restore@v4
+        with:
+          fail-on-cache-miss: true
+          path: ${{ inputs.path }}
+          key: ${{ inputs.key }}
+      - uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          source: "${{ inputs.path }}/*"
+          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+          strip_components: ${{ inputs.strip_components }}
+          overwrite: true
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: 'no_files'
+      - name: cleanup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        if: inputs.cleanup == true
+        run: gh cache delete ${{ inputs.key }}
