@@ -62,8 +62,6 @@ jobs:
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }}
       - name: Moving
         run: mkdir --parents ${{ github.workspace }}/config; mv cloud/rendered/cloud/templates/pm2.yaml $_
-      - name: ls
-        run: tree
       - name: cache config
         uses: actions/cache/save@v4
         with:
@@ -100,6 +98,8 @@ jobs:
           fail-on-cache-miss: true
           path: ${{ github.workspace }}/config
           key: config-${{ github.sha }}
+      - run: tree
+
       - name: scp files to server
         uses: appleboy/scp-action@v0.1.7
         with:
