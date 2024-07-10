@@ -94,7 +94,7 @@ func Send(message, messageId, userId, conversationId string) string {
 }
 
 func readInst() string {
-	readFile, err := os.Open("./integrations/cohere/cohere-inst.txt")
+	readFile, err := os.Open(os.Getenv("COHERE_INST"))
 
 	if err != nil {
 		fmt.Println(err)
