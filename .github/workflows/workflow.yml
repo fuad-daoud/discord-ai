@@ -45,7 +45,7 @@ jobs:
           username: root
           password: 1234Test
           script: |
-            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
+            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
   upload_artifacts:
     permissions: write-all
@@ -73,7 +73,7 @@ jobs:
       - name: Templating
         run: |
           helm template cloud --output-dir cloud/rendered \
-            --set name=${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
+            --set name=${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }} \
             --set script="/root/${{ vars.SERVICE }}/${{ github.ref_name }}/run" \
             --set cwd="/root/${{ vars.SERVICE }}/${{ github.ref_name }}" \
             --set env.TOKEN=${{ github.ref_type == 'tag' && vars.LUNA_TOKEN || vars.LUNA_BETA_TOKEN }} \
@@ -110,8 +110,4 @@ jobs:
     uses: ./.github/workflows/deploy.yml
     needs: [ upload_config, upload_artifacts ]
     with:
-#      cleanup: ${{ github.ref_type != 'tag' }}
-      cleanup: false
-
-
-#      gh cache delete <CACHE_ID>
+      cleanup: ${{ github.ref_type != 'tag' }}
