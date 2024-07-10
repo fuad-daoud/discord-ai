@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      artifacts: ${{ steps.building.outputs.artifacts }}
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v4
@@ -23,7 +25,10 @@ jobs:
       - name: download dependencies
         run: go mod download
       - name: build binary
-        run: go build -v -x -o "${{ github.workspace }}/artifacts/run" "./cmd/ai/main/main.go"
+        id: building
+        run: |
+          go build -v -x -o "${{ github.workspace }}/artifacts/run" "./cmd/ai/main/main.go"
+          echo "artifacts=${{ github.workspace }}/artifacts" >> "$GITHUB_OUTPUT"
       - name: cache artifacts
         uses: actions/cache/save@v4
         with:
@@ -44,9 +49,9 @@ jobs:
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
   upload_artifacts:
     uses: ./.github/workflows/upload.yml
-    needs: [ pause ]
+    needs: [ build, pause ]
     with:
-      path: ${{ github.workspace }}/artifacts
+      path: ${{ needs.build.outputs.artifacts }}
       key: artifacts-${{ github.sha }}
       strip_components: 3
   helm:
@@ -89,7 +94,7 @@ jobs:
     uses: ./.github/workflows/upload.yml
     needs: [ helm ]
     with:
-      path: ${{ github.workspace }}/config
+      path: /home/runner/work/discord-ai/discord-ai/config
       key: config-${{ github.sha }}
       strip_components: 3
   call_deploy:
