@@ -60,8 +60,8 @@ jobs:
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }}
-          mkdir ${{ github.workspace }}/config
-          mv cloud/rendered/cloud/templates/pm2.yaml ${{ github.workspace }}/config/
+      - name: Moving
+        run: mkdir --parents ${{ github.workspace }}/config; mv cloud/rendered/cloud/templates/pm2.yaml $_
       - name: cache config
         uses: actions/cache/save@v4
         with:
