@@ -51,7 +51,7 @@ jobs:
         with:
           fail-on-cache-miss: true
           path: ${{ inputs.path }}
-          key: "${{ inputs.key }}"
+          key: config-${{ github.sha }}
       - name: scp files to server
         uses: appleboy/scp-action@v0.1.7
         with:
