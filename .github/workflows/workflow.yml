@@ -54,13 +54,13 @@ jobs:
             ~/go/pkg/mod
           key: go-${{ hashFiles('**/go.sum') }}
       - name: build binary
-        run: go build -v -x -o "/home/runner/artifacts/run" "./cmd/ai/main/main.go"
+        run: go build -v -x -o "${{ github.workspace }}/artifacts/run" "./cmd/ai/main/main.go"
       - name: cp cohere inst
-        run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt /home/runner/artifacts
+        run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt ${{ github.workspace }}/artifacts
       - name: cache artifacts
         uses: actions/cache@v4
         with:
-          path: /home/runner/artifacts
+          path: ${{ github.workspace }}/artifacts
           key: artifacts-${{ github.sha }}
 
   helm:
