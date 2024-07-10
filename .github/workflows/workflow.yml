@@ -22,6 +22,8 @@ jobs:
             ~/.cache/go-build
             ~/go/pkg/mod
           key: go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-
       - name: Setup Go 1.22.x
         uses: actions/setup-go@v5
         with:
@@ -76,9 +78,7 @@ jobs:
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
-      - name: Moving
-        run: |
-          mkdir -p ${{ github.workspace }}/config/
+          mkdir -p ${{ github.workspace }}/config/ \
           mv cloud/rendered/cloud/templates/pm2.yaml ${{ github.workspace }}/config/
       - name: cache config
         uses: actions/cache/save@v4
@@ -97,7 +97,7 @@ jobs:
           username: root
           password: 1234Test
           script: |
-            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
+            service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status') \
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
 
   upload:
