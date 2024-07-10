@@ -17,7 +17,7 @@ on:
       cleanup:
         type: boolean
         description: Delete cache after uploading files
-        required: true
+        required: false
         default: true
   workflow_dispatch:
     inputs:
@@ -37,7 +37,7 @@ on:
       cleanup:
         type: boolean
         description: Delete cache after uploading files
-        required: true
+        required: false
         default: true
 
 
