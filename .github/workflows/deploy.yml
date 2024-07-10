@@ -30,9 +30,6 @@ jobs:
           password: 1234Test
           script: pm2 start /root/${{ vars.SERVICE }}/${{ github.ref_name }}/pm2.yaml
   cleanup:
-    permissions:
-      contents: 'read'
-      id-token: 'write'
     runs-on: ubuntu-latest
     needs: [ deploy ]
     if: inputs.cleanup == true
