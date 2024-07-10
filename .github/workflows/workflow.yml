@@ -57,13 +57,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: build binary
-        run: go build -v -x -o "/artifacts/run" "./cmd/ai/main/main.go"
+        run: go build -v -x -o "/home/runner/artifacts/run" "./cmd/ai/main/main.go"
       - name: cp cohere inst
-        run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt /artifacts
+        run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt /home/runner/artifacts
       - name: cache
         uses: actions/cache@v4
         with:
-          path: /artifacts
+          path: /home/runner/artifacts
           key: ${{ runner.os }}-go-run-${{ hashFiles(github.sha) }}
 
   helm:
@@ -103,7 +103,7 @@ jobs:
       - name: restore cache
         uses: actions/cache@v4
         with:
-          path: /artifacts
+          path: /home/runner/artifacts
           key: ${{ runner.os }}-go-run-${{ hashFiles(github.sha) }}
       - name: scp binary to server
         uses: appleboy/scp-action@v0.1.7
@@ -111,7 +111,7 @@ jobs:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: /artifacts
+          source: /home/runner/artifacts
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
