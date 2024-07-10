@@ -60,14 +60,18 @@ jobs:
       - name: cp cohere inst
         run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt /home/runner/artifacts
       - name: ls cache
-        run: tree -aI /home/runner/artifacts
+        run: |
+          cd /home/runner
+          tree -aI
       - name: cache artifacts
         uses: actions/cache@v4
         with:
           path: /home/runner/artifacts
           key: artifacts-${{ github.sha }}
       - name: ls cache
-        run: tree -aI /home/runner/artifacts
+        run: |
+          cd /home/runner
+          tree -aI
 
   helm:
     runs-on: ubuntu-latest
@@ -110,7 +114,9 @@ jobs:
           path: /home/runner/artifacts
           key: artifacts-${{ github.sha }}
       - name: ls cache
-        run: tree -aI /home/runner/artifacts
+        run: |
+          cd /home/runner
+          tree -aI
       - name: scp binary to server
         uses: appleboy/scp-action@v0.1.7
         with:
