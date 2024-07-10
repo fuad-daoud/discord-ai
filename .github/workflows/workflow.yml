@@ -62,7 +62,7 @@ jobs:
       - name: ls cache
         run: |
           cd /home/runner
-          tree -aI
+          tree
       - name: cache artifacts
         uses: actions/cache@v4
         with:
@@ -71,7 +71,7 @@ jobs:
       - name: ls cache
         run: |
           cd /home/runner
-          tree -aI
+          tree
 
   helm:
     runs-on: ubuntu-latest
@@ -116,7 +116,7 @@ jobs:
       - name: ls cache
         run: |
           cd /home/runner
-          tree -aI
+          tree
       - name: scp binary to server
         uses: appleboy/scp-action@v0.1.7
         with:
