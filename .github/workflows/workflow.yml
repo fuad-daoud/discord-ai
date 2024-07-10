@@ -22,50 +22,50 @@ jobs:
 
 
   build:
-      runs-on: ubuntu-latest
-      needs: [setup]
-      steps:
-        - name: Checkout the repo
-          uses: actions/checkout@v4
-          with:
-            show-progress: true
-        - name: Setup Go 1.22.x
-          uses: actions/setup-go@v5
-          with:
-            go-version: '1.22.x'
-        - name: Display Go version
-          run: go version
-        - name: download dependencies
-          run: go mod download
-        - name: build binary
-          run: go build -v -x -o "./bin/run" "./cmd/ai/main/main.go"
-        - name: Upload binary
-          uses: actions/upload-artifact@v4
-          with:
-            name: "run-${{ github.ref_name }}"
-            path: ${{ github.workspace }}/bin/run
-            retention-days: 7
-            if-no-files-found: error
-        - name: scp binary to server
-          uses: appleboy/scp-action@v0.1.7
-          with:
-            host: 165.22.92.220
-            username: root
-            password: 1234Test
-            source: ${{ github.workspace }}/bin/run
-            target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-            strip_components: 3
-            overwrite: true
-        - name: scp cohere inst
-          uses: appleboy/scp-action@v0.1.7
-          with:
-            host: 165.22.92.220
-            username: root
-            password: 1234Test
-            source: ${{ github.workspace }}/integrations/cohere/cohere-inst.txt
-            target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-            strip_components: 4
-            overwrite: true
+    runs-on: ubuntu-latest
+    needs: [ setup ]
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+        with:
+          show-progress: true
+      - name: Setup Go 1.22.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      - name: Display Go version
+        run: go version
+      - name: check cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: download dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: go mod download
+      - name: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: build binary
+        run: go build -v -x -o "/artifacts/run" "./cmd/ai/main/main.go"
+      - name: cp cohere inst
+        run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt /artifacts
+      - name: cache
+        uses: actions/cache@v4
+        with:
+          path: /artifacts
+          key: ${{ runner.os }}-go-run-${{ hashFiles(github.sha) }}
+
   helm:
     runs-on: ubuntu-latest
     container: alpine/helm:3.15.2
@@ -95,18 +95,38 @@ jobs:
             --set env.ELVENLABS_API_KEY=${{ vars.ELVENLABS_API_KEY }} \
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
-      - name: scp config to server
+
+  upload:
+    runs-on: ubuntu-latest
+    needs: [helm, build]
+    steps:
+      - name: restore cache
+        uses: actions/cache@v4
+        with:
+          path: /artifacts
+          key: ${{ runner.os }}-go-run-${{ hashFiles(github.sha) }}
+      - name: scp binary to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: ${{ github.workspace }}/cloud/rendered/cloud/templates/pm2.yaml
+          source: /artifacts
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-          strip_components: 6
+          strip_components: 3
           overwrite: true
+#      - name: scp cohere inst
+#        uses: appleboy/scp-action@v0.1.7
+#        with:
+#          host: 165.22.92.220
+#          username: root
+#          password: 1234Test
+#          source: /artifacts/cohere-inst.txt
+#          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+#          strip_components: 4
+#          overwrite: true
   call_deploy:
     uses: ./.github/workflows/deploy.yml
-    needs: [helm, build]
+    needs: [ helm, build ]
     with:
       cleanup: ${{ github.ref_type != 'tag' }}
