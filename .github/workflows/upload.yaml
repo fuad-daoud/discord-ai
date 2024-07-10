@@ -1,0 +1,46 @@
+on:
+  workflow_call:
+    inputs:
+      path:
+        type: string
+        description: Path of directory for cache and upload as source
+        required: true
+      strip_components:
+        type: number
+        description: Number of components to strip
+        default: 0
+        required: false
+      key:
+        type: string
+        description: Key for cache
+        required: true
+  workflow_dispatch:
+    inputs:
+      cleanup:
+        type: boolean
+        description: Delete files and deployment after deploying or not
+        required: true
+        default: true
+
+
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: restore cache
+        uses: actions/cache/restore@v4
+        with:
+          fail-on-cache-miss: true
+          path: ${{ input.path }}
+          key: ${{ input.key }}
+      - name: scp files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          source: "${{ input.path }}/*"
+          target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
+          strip_components: ${{ input.strip_components }}
+          overwrite: true
