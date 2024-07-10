@@ -115,15 +115,13 @@ jobs:
           fail-on-cache-miss: true
           path: ${{ github.workspace }}/config
           key: config-${{ github.sha }}
-      - name: move config to artifacts
-        run: mv ${{ github.workspace }}/config/* ${{ github.workspace }}/artifacts/
       - name: scp files to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: ${{ github.workspace }}/artifacts/*
+          source: "${{ github.workspace }}/artifacts/*, ${{ github.workspace }}/config/*"
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: 3
           overwrite: true
