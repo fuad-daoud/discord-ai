@@ -32,15 +32,15 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           fail-on-cache-miss: true
-          path: ${{ input.path }}
-          key: ${{ input.key }}
+          path: ${{ inputs.path }}
+          key: ${{ inputs.key }}
       - name: scp files to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 165.22.92.220
           username: root
           password: 1234Test
-          source: "${{ input.path }}/*"
+          source: "${{ inputs.path }}/*"
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: ${{ input.strip_components }}
           overwrite: true
