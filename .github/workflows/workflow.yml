@@ -44,7 +44,7 @@ jobs:
             ~/go/pkg/mod
           key: go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-                    go-
+            go-${{ hashFiles('**/go.sum') }}
       - name: download dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: go mod download
@@ -59,19 +59,13 @@ jobs:
         run: go build -v -x -o "/home/runner/artifacts/run" "./cmd/ai/main/main.go"
       - name: cp cohere inst
         run: cp ${{ github.workspace }}/integrations/cohere/cohere-inst.txt /home/runner/artifacts
-      - name: ls cache
-        run: |
-          cd /home/runner
-          tree
       - name: cache artifacts
         uses: actions/cache@v4
         with:
           path: /home/runner/artifacts
           key: artifacts-${{ github.sha }}
-      - name: ls cache
-        run: |
-          cd /home/runner
-          tree
+          restore-keys: |
+            artifacts-${{ github.sha }}
 
   helm:
     runs-on: ubuntu-latest
