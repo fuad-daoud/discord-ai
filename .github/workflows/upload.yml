@@ -14,11 +14,29 @@ on:
         type: string
         description: Key for cache
         required: true
-  workflow_dispatch:
-    inputs:
       cleanup:
         type: boolean
-        description: Delete files and deployment after deploying or not
+        description: Delete cache after uploading files
+        required: true
+        default: true
+  workflow_dispatch:
+    inputs:
+      path:
+        type: string
+        description: Path of directory for cache and upload as source
+        required: true
+      strip_components:
+        type: number
+        description: Number of components to strip
+        default: 0
+        required: false
+      key:
+        type: string
+        description: Key for cache
+        required: true
+      cleanup:
+        type: boolean
+        description: Delete cache after uploading files
         required: true
         default: true
 
@@ -42,5 +60,8 @@ jobs:
           password: 1234Test
           source: "${{ inputs.path }}/*"
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-          strip_components: ${{ input.strip_components }}
+          strip_components: ${{ inputs.strip_components }}
           overwrite: true
+      - name: cleanup
+        if: inputs.cleanup == true
+        run: gh cache delete ${{ inputs.key }}

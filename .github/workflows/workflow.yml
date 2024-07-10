@@ -98,3 +98,6 @@ jobs:
     with:
 #      cleanup: ${{ github.ref_type != 'tag' }}
       cleanup: false
+
+
+#      gh cache delete <CACHE_ID>
