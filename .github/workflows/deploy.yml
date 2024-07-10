@@ -40,6 +40,6 @@ jobs:
           username: root
           password: 1234Test
           script: |
-            pm2 stop ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}
+            pm2 stop ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}
             rm -rf /root/${{ vars.SERVICE }}/${{ github.ref_name }}
-            pm2 delete ${{ format('{0}-{1}', vars.SERVICE, github.ref_name) }}
+            pm2 delete ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}
