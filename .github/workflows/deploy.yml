@@ -3,14 +3,14 @@ name: deploy-cleanup
 on:
   workflow_call:
     inputs:
-      clean:
+      cleanup:
         type: boolean
         description: Delete files and deployment after deploying or not
         required: true
         default: true
   workflow_dispatch:
     inputs:
-      clean:
+      cleanup:
         type: boolean
         description: Delete files and deployment after deploying or not
         required: true
@@ -35,7 +35,7 @@ jobs:
       id-token: 'write'
     runs-on: ubuntu-latest
     needs: [ deploy ]
-    if: inputs.clean == true
+    if: inputs.cleanup == true
     steps:
       - name: executing remote ssh commands using password
         uses: appleboy/ssh-action@v1.0.3
