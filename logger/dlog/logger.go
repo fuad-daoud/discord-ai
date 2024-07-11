@@ -4,7 +4,6 @@ import (
 	"github.com/fuad-daoud/discord-ai/logger/dlog/prettylog"
 	"github.com/robfig/cron/v3"
 	slogmulti "github.com/samber/slog-multi"
-	"io"
 	"log/slog"
 	"os"
 )
@@ -53,11 +52,14 @@ func setup() {
 func createLogger() *slog.Logger {
 	opts := &slog.HandlerOptions{
 		AddSource:   true,
-		Level:       nil,
+		Level:       slog.LevelDebug,
 		ReplaceAttr: nil,
 	}
 
-	os.MkdirAll("logs/buffered", os.ModePerm)
+	err := os.MkdirAll("logs/buffered", os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
 
 	return slog.New(slogmulti.Fanout(
 		getPrettyHandler(archiver, opts),
@@ -110,26 +112,12 @@ func getPrettyHandler(archiver *Archiver, opts *slog.HandlerOptions) *prettylog.
 		panic(err)
 	}
 
-	return prettylog.NewHandler(&DualWriter{
-		stdout: os.Stdout,
-		file: &BufferedFile{
+	return prettylog.NewHandler(prettylog.DualWriter{
+		Stdout: os.Stdout,
+		File: &BufferedFile{
 			Archiver:   archiver,
 			File:       filePretty,
 			BufferFile: prettyBufferFile,
 		},
 	}, opts)
-}
-
-type DualWriter struct {
-	stdout *os.File
-	file   io.Writer
-}
-
-func (t *DualWriter) Write(p []byte) (n int, err error) {
-	n, err = t.stdout.Write(p)
-	if err != nil {
-		return n, err
-	}
-	n, err = t.file.Write(p)
-	return n, err
 }

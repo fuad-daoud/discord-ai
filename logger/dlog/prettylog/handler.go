@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 	"io"
 	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,12 +42,37 @@ func colorizer(colorCode color, v string) string {
 	return fmt.Sprintf("\033[%sm%s%s", strconv.Itoa(int(colorCode)), v, reset)
 }
 
+type DualWriter struct {
+	Stdout *os.File
+	File   io.Writer
+}
+
+func (t DualWriter) Write(p []byte) (n int, err error) {
+	n, err = t.WriteStd(p)
+	if err != nil {
+		return n, err
+	}
+	n, err = t.WriteFile(p)
+	return n, err
+}
+func (t *DualWriter) WriteStd(p []byte) (n int, err error) {
+	n, err = t.Stdout.Write(p)
+	if err != nil {
+		return n, err
+	}
+	return n, err
+}
+func (t *DualWriter) WriteFile(p []byte) (n int, err error) {
+	n, err = t.File.Write(p)
+	return n, err
+}
+
 type Handler struct {
 	h        slog.Handler
 	r        func([]string, slog.Attr) slog.Attr
 	b        *bytes.Buffer
 	m        *sync.Mutex
-	writer   io.Writer
+	writer   DualWriter
 	colorize bool
 }
 
@@ -168,6 +194,15 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 		out.WriteString(colorize(green, string(bytes)))
 	}
 
+	if r.Level <= slog.LevelDebug {
+		_, err := h.writer.WriteFile([]byte(out.String() + "\n"))
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	//w.Write([]byte(s))
 	_, err = io.WriteString(h.writer, out.String()+"\n")
 	if err != nil {
 		return err
@@ -216,13 +251,13 @@ func New(handlerOptions *slog.HandlerOptions, options ...Option) *Handler {
 	return handler
 }
 
-func NewHandler(writer io.Writer, opts *slog.HandlerOptions) *Handler {
+func NewHandler(writer DualWriter, opts *slog.HandlerOptions) *Handler {
 	return New(opts, WithDestinationWriter(writer), WithColor())
 }
 
 type Option func(h *Handler)
 
-func WithDestinationWriter(writer io.Writer) Option {
+func WithDestinationWriter(writer DualWriter) Option {
 	return func(h *Handler) {
 		h.writer = writer
 	}

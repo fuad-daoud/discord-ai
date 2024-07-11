@@ -45,7 +45,7 @@ type TransactionExecute func(write Write)
 func getTxWrite(transaction neo4j.ExplicitTransaction, ctx context.Context) Write {
 	return func(stmts ...string) neo4j.ResultWithContext {
 		stmt := strings.Join(stmts, " ")
-		dlog.Info("Writing ", "stmt", stmt)
+		dlog.Debug("Writing ", "stmt", stmt)
 		run, err := transaction.Run(ctx, stmt, make(map[string]any))
 		if err != nil {
 			dlog.Error("Transaction run failed", "err", err)
@@ -57,7 +57,7 @@ func getTxWrite(transaction neo4j.ExplicitTransaction, ctx context.Context) Writ
 
 func Query(stmts ...string) *neo4j.EagerResult {
 	stmt := strings.Join(stmts, " ")
-	dlog.Info("Querying ", "stmt", stmt)
+	dlog.Debug("Querying ", "stmt", stmt)
 	result, err := neo4j.ExecuteQuery(context.Background(), connection.driver, stmt, make(map[string]any), neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"))
 	if err != nil {
 		dlog.Error("Error executing query", "err", err)
