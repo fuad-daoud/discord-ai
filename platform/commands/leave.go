@@ -9,7 +9,7 @@ import (
 
 func leave(call *cohere.CommandCall) {
 	toolCall := call.ToolCall
-	guildId := snowflake.MustParse(call.Properties["guildId"].(string))
+	guildId := snowflake.MustParse(call.ExtraProperties.GuildId)
 	_, botStateOk := platform.Cache().VoiceState(guildId, platform.Client().ApplicationID())
 	if !botStateOk {
 		cohere.Result <- &cohere.CommandResult{

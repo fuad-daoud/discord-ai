@@ -11,7 +11,7 @@ import (
 )
 
 func dbThreadCreateHandler(event *events.ThreadCreate) {
-	dlog.Info("Starting db ThreadCreateHandler")
+	dlog.Debug("Starting db ThreadCreateHandler")
 	if event.Thread.OwnerID != event.Client().ApplicationID() {
 		return
 	}
@@ -37,11 +37,11 @@ func dbThreadCreateHandler(event *events.ThreadCreate) {
 			cypher.Merge("(mb)-[:CREATED]->(t)"),
 		)
 	})
-	dlog.Info("Finished DB ThreadCreateHandler")
+	dlog.Debug("Finished DB ThreadCreateHandler")
 }
 
 func dbMessageUpdateHandler(event *events.GuildMessageUpdate) {
-	dlog.Info("Starting DB MessageUpdateHandler")
+	dlog.Debug("Starting DB MessageUpdateHandler")
 	if event.Message.Flags == discord.MessageFlagHasThread && event.OldMessage.ChannelID == event.ChannelID {
 		return
 	}
@@ -60,14 +60,14 @@ func dbMessageUpdateHandler(event *events.GuildMessageUpdate) {
 			}),
 			cypher.Return("m"))
 	})
-	dlog.Info("Finished DB MessageUpdateHandler")
+	dlog.Debug("Finished DB MessageUpdateHandler")
 }
 
 func dbMessageCreateHandler(event *events.GuildMessageCreate) {
 	if event.Message.Type == discord.MessageTypeThreadStarterMessage {
 		return
 	}
-	dlog.Info("Starting DB messageCreateHandler")
+	dlog.Debug("Starting DB messageCreateHandler")
 	restClient := event.Client().Rest()
 	channel, _ := restClient.GetChannel(event.ChannelID)
 
@@ -87,7 +87,7 @@ func dbMessageCreateHandler(event *events.GuildMessageCreate) {
 			createMessageHandler(write, channel, event.GuildID.String(), member, message)
 		}
 	})
-	dlog.Info("Finished DB messageCreateHandler")
+	dlog.Debug("Finished DB messageCreateHandler")
 }
 
 func createMessageHandler(write db.Write, channel discord.Channel, guildId string, member db.Member, message db.Message) {

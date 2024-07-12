@@ -16,7 +16,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 )
 
 func HandleDeepgramVoicePackets(conn voice.Conn, messageId string) {
@@ -116,56 +115,9 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 
 	messageContent := event.Message.Content
 	if channel.Type() == discord.ChannelTypeGuildPublicThread {
-		var process Process
 		thread := channel.(discord.GuildThread)
 		dlog.Info("Got thread", "ID", thread.ID())
-		if thread.ParentID().String() == "1252536839886082109" {
-			process = func(message, messageId, memberId, threadId string) string {
-				botState, botStateOk := event.Client().Caches().VoiceState(event.GuildID, event.Client().ApplicationID())
-
-				_, userStateOk := event.Client().Caches().VoiceState(event.GuildID, authorId)
-				if !userStateOk {
-					return "You are not in a voice channel bro "
-				}
-				go func() {
-					err := event.Client().Rest().SendTyping(thread.ID())
-					if err != nil {
-						panic(err)
-					}
-				}()
-
-				if botStateOk {
-					err := deafen(&event.GuildID, botState.ChannelID)
-					if err != nil {
-						panic(err)
-					}
-				}
-				response := cohere.Send(message+"(respond like you are whispering)", event.MessageID.String(), authorId.String(), thread.ID().String())
-				audioProvider, err := elevenlabs.TTS(response)
-				if err != nil {
-					dlog.Error("Failed to send speech", "err", err)
-					panic(err)
-				}
-				if botStateOk {
-					conn := event.Client().VoiceManager().GetConn(event.GuildID)
-					conn.SetOpusFrameProvider(audioProvider)
-					return response
-				}
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-				defer cancel()
-				conn := event.Client().VoiceManager().CreateConn(event.GuildID)
-				err = conn.Open(ctx, *botState.ChannelID, false, false)
-				if err != nil {
-					dlog.Error("Failed to open voice channel", "channel", event.GuildID, "error", err)
-					panic(err)
-				}
-				conn.SetOpusFrameProvider(audioProvider)
-				return response
-			}
-		} else {
-			process = cohere.Send
-		}
-		replyText(thread.ID(), messageContent, event.MessageID.String(), authorId.String(), process)
+		streamMessage(thread.ID(), messageContent, event.MessageID.String(), authorId.String())
 	} else {
 		if channel.ID().String() != "1252273230727876619" && channel.ID().String() != "1252536839886082109" && channel.ID().String() != "1256856679379636276" {
 			return
@@ -191,8 +143,7 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 			dlog.Error("could not create discord thread", err.Error())
 			panic(err)
 		}
-
-		replyText(newThread.ID(), messageContent, event.MessageID.String(), authorId.String(), cohere.Send)
+		streamMessage(newThread.ID(), messageContent, event.MessageID.String(), authorId.String())
 	}
 }
 
@@ -238,7 +189,7 @@ func GetLocalIPs() ([]net.IP, error) {
 	return ips, nil
 }
 
-func replyText(channelId snowflake.ID, content, messageId, authorId string, process Process) {
+func streamMessage(channelId snowflake.ID, content, messageId, authorId string) {
 	processingMessage := "Dazzling✨💫"
 
 	message, err := Rest().CreateMessage(channelId, discord.MessageCreate{
@@ -248,19 +199,83 @@ func replyText(channelId snowflake.ID, content, messageId, authorId string, proc
 		panic(err)
 	}
 
-	response := process(content, messageId, authorId, channelId.String())
-	updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: &response})
+	streamResult := cohere.StreamChat(content, channelId.String(), cohere.Properties{
+		MessageId: messageId,
+		UserId:    authorId,
+	})
+
+	err = Rest().AddReaction(channelId, message.ID, "🌙")
 	if err != nil {
 		panic(err)
 	}
-	dlog.Info("updated message:", "ID", updateMessage.ID.String())
+
+	byteLength := 0
+	byteString := make([]byte, 1000)
+	newBytes := 0
+	for result := range streamResult {
+		dlog.Info("got result", "result type", result.Type)
+		switch result.Type {
+		case cohere.Start:
+			{
+				updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String("Thinking🤔...")})
+				if err != nil {
+					panic(err)
+				}
+				err = Rest().AddReaction(channelId, message.ID, "🔵")
+				if err != nil {
+					panic(err)
+				}
+				dlog.Debug("started message:", "ID", updateMessage.ID.String())
+				break
+			}
+		case cohere.Text:
+			{
+				go func() {
+					copiedBytes := copy(byteString[byteLength:], result.Message)
+					newBytes += copiedBytes
+					byteLength += copiedBytes
+					dlog.Info("got text event", "copied bytes:", copiedBytes, "message", result.Message)
+					if newBytes < 20 {
+						return
+					}
+					newBytes = 0
+
+					_, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String(string(byteString))})
+					if err != nil {
+						panic(err)
+					}
+					//dlog.Debug("updated message:", "ID", updateMessage.ID.String())
+				}()
+				break
+			}
+		case cohere.End:
+			{
+				updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String(result.Message)})
+				if err != nil {
+					panic(err)
+				}
+				dlog.Debug("updated message:", "ID", updateMessage.ID.String())
+
+				err = Rest().RemoveOwnReaction(channelId, message.ID, "🔵")
+				if err != nil {
+					panic(err)
+				}
+				err = Rest().AddReaction(channelId, message.ID, "🟢")
+				if err != nil {
+					panic(err)
+				}
+				dlog.Debug("finished message:", "ID", message.ID)
+				return
+			}
+		}
+	}
 }
 
 type Process func(message, messageId, userId, threadId string) string
 
 func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 	if event.Member.User.ID == Client().ID() {
-		dlog.Info("Update on bot voice state")
+		dlog.Debug("Update on bot voice state")
 		id := event.GenericGuildVoiceState.VoiceState.ChannelID
 		if id == nil {
 			dlog.Info("Disconnected from voice channel")
@@ -273,8 +288,8 @@ func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 
 func isCallingMe(message string) bool {
 	message = strings.ToLower(message)
-	prefixes := []string{"luna", "hey luna", "hello luna", "hello, luna", "you luna", "ya luna", "ola luna", "luna hello", "luna, hello"}
-	dlog.Info("detecting message", "message", message)
+	prefixes := []string{"luna", "hey luna", "hello luna", "hello, luna", "you luna", "ya luna", "ola luna", "luna hello", "luna, hello", "luan", "Luan"}
+	dlog.Debug("detecting message", "message", message)
 	for _, prefix := range prefixes {
 		if strings.HasPrefix(message, prefix) {
 			return true

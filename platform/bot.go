@@ -65,7 +65,7 @@ type Handler struct {
 }
 
 func (h Handler) OnEvent(event bot.Event) {
-	dlog.Info("update client")
+	dlog.Debug("update client")
 	c := event.Client()
 	client = &c
 }

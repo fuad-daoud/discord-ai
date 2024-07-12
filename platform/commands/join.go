@@ -15,11 +15,9 @@ import (
 func AddCommandsChannelOnReadyHandler() {
 	go func() {
 		for call := range cohere.Call {
-			messageId, ok := call.Properties["messageId"].(string)
-			if ok {
-				guildId := getGuildId(messageId)
-				call.Properties["guildId"] = guildId
-			}
+
+			guildId := getGuildId(call.ExtraProperties.MessageId)
+			call.ExtraProperties.GuildId = guildId
 
 			switch call.Name {
 			case "command_join":
@@ -72,9 +70,9 @@ func getGuildId(messageId string) string {
 func joinFunction(call *cohere.CommandCall) {
 	dlog.Info("starting join function")
 	toolCall := call.ToolCall
-	properties := call.Properties
-	guildId := snowflake.MustParse(properties["guildId"].(string))
-	userId := snowflake.MustParse(properties["userId"].(string))
+
+	guildId := snowflake.MustParse(call.ExtraProperties.GuildId)
+	userId := snowflake.MustParse(call.ExtraProperties.UserId)
 
 	voiceState, b := platform.Cache().VoiceState(guildId, userId)
 	if !b {
@@ -149,7 +147,7 @@ func joinFunction(call *cohere.CommandCall) {
 	}
 	dlog.Info("wrote silent frame successfully")
 
-	go platform.HandleDeepgramVoicePackets(conn, properties["messageId"].(string))
+	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties.MessageId)
 
 	cohere.Result <- &cohere.CommandResult{
 		Call: toolCall,
@@ -162,7 +160,8 @@ func joinFunction(call *cohere.CommandCall) {
 	}
 	audioProvider, err := elevenlabs.TTS("I am here !!")
 	if err != nil {
-		panic(err)
+		//panic(err)
+		return
 	}
 
 	conn.SetOpusFrameProvider(audioProvider)

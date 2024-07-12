@@ -1,112 +1,117 @@
 package cohere
 
 import (
-	"bufio"
-	"fmt"
+	"errors"
 	cohere "github.com/cohere-ai/cohere-go/v2"
 	"github.com/cohere-ai/cohere-go/v2/client"
+	"github.com/cohere-ai/cohere-go/v2/core"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
-	"log"
-	"os"
-	"strings"
+	"io"
 )
 
-type CommandCall struct {
-	*cohere.ToolCall
-	Properties map[string]interface{}
-}
-type CommandResult = cohere.ToolResult
-
-var (
-	Call   = make(chan *CommandCall)
-	Result = make(chan *CommandResult)
-)
-
-var (
-	tools = []*cohere.Tool{
-		{
-			Name:                 "command_join",
-			Description:          "Join the voice channel the user is in",
-			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
-		},
-		{
-			Name:                 "command_leave",
-			Description:          "disconnect from the voice channel",
-			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
-		},
-		{
-			Name:        "command_play",
-			Description: "play a youtube video given information about it",
-			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{
-				"information": {
-					Description: cohere.String("information about the song or the youtube link of a video"),
-					Type:        "str",
-					Required:    cohere.Bool(true),
-				},
-			},
-		},
-	}
-)
-
-func chat(message, messageId, userId, conversationId string) string {
+func clientChatStream(ctx context.Context, request *cohere.ChatStreamRequest) *core.Stream[cohere.StreamedChatResponse] {
 	co := client.NewClient(client.WithToken("xLPWbInVLTliZHK8JbYxYrtoEpu6K4Y8KFjJVJZ5"))
+	chatStream, err := co.ChatStream(ctx, request)
+	if err != nil {
+		dlog.Error(err.Error())
+		panic(err)
+	}
+	return chatStream
+}
 
-	request := &cohere.ChatRequest{
+func StreamChat(message, conversationId string, prop Properties) chan StreamResult {
+	request := &cohere.ChatStreamRequest{
 		Message:        message,
 		Model:          cohere.String("command-r-plus"),
 		Preamble:       cohere.String(readInst()),
 		ConversationId: cohere.String(conversationId),
-		Temperature:    cohere.Float64(0.5),
+		Temperature:    cohere.Float64(0.99),
 		Tools:          tools,
 	}
-	resp, err := co.Chat(context.TODO(), request)
-	if err != nil {
-		log.Fatal(err)
-		return "Something wrong happened contact Admin"
-	}
-	dlog.Debug("Response from cohere", "resp", fmt.Sprintf("%+v", resp))
-	if resp.ToolCalls != nil {
-		request.ToolResults = make([]*cohere.ToolResult, len(resp.ToolCalls))
-		for index, toolCall := range resp.ToolCalls {
-			Call <- &CommandCall{
-				ToolCall: toolCall,
-				Properties: map[string]interface{}{
-					"messageId": messageId,
-					"userId":    userId,
-				},
-			}
-			request.ToolResults[index] = <-Result
+
+	results := make(chan StreamResult)
+	go stream(&StreamContext{
+		prop:    prop,
+		request: request,
+		ctx:     context.Background(),
+		result:  results,
+	})
+	return results
+}
+
+func stream(context *StreamContext) {
+	chatStream := clientChatStream(context.ctx, context.request)
+	for {
+		response, err := chatStream.Recv()
+		if err != nil && !errors.Is(err, io.EOF) {
+			panic(err)
 		}
-		request.Message = ""
-		resp, err = co.Chat(context.TODO(), request)
-		if err != nil {
-			log.Fatal(err)
-			return "Something wrong happened contact Admin"
+		if response.EventType == "stream-start" {
+			dlog.Info("got event", "eventType", response.EventType, "response", response)
 		}
-
+		//dlog.Info("got event", "eventType", response.EventType, "response", response)
+		context.response = response
+		go handleStreamEvent(context)
+		if response.EventType == "stream-end" || response.EventType == "tool-calls-generation" {
+			dlog.Info("got event", "eventType", response.EventType, "response", response)
+			break
+		}
 	}
-	return resp.Text
 }
 
-func Send(message, messageId, userId, conversationId string) string {
-	return chat(message, messageId, userId, conversationId)
+func handleStreamEvent(context *StreamContext) {
+	switch context.response.EventType {
+	//case "tool-calls-generation":
+	//	{
+	//		toolCalls := context.response.ToolCallsGeneration.ToolCalls
+	//		context.request.ToolResults = make([]*cohere.ToolResult, len(toolCalls))
+	//		for index, toolCall := range toolCalls {
+	//			Call <- &CommandCall{
+	//				ToolCall:        toolCall,
+	//				ExtraProperties: context.prop,
+	//			}
+	//			context.request.ToolResults[index] = <-Result
+	//		}
+	//		context.request.Message = ""
+	//		chatStream := clientChatStream(context.ctx, context.request)
+	//		for {
+	//			response, err := chatStream.Recv()
+	//			if err != nil && !errors.Is(err, io.EOF) {
+	//				panic(err)
+	//			}
+	//			dlog.Debug("got event", "eventType", response.EventType, "response", response)
+	//			context.response = response
+	//			go handleStreamEvent(context)
+	//			if response.EventType == "stream-end" {
+	//				break
+	//			}
+	//		}
+	//		break
+	//	}
+	case "stream-start":
+		//dlog.Info("TEST started stream")
+		go context.start()
+		break
+	case "stream-end":
+		//dlog.Info("TEST stopped stream")
+		go context.end(context.response.StreamEnd.Response.Text)
+		break
+	case "text-generation":
+		go context.Text(context.response.TextGeneration.Text)
+		break
+	default:
+		break
+	}
 }
 
-func readInst() string {
-	readFile, err := os.Open(os.Getenv("COHERE_INST"))
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	fileScanner := bufio.NewScanner(readFile)
-
-	fileScanner.Split(bufio.ScanLines)
-	builder := strings.Builder{}
-	for fileScanner.Scan() {
-		builder.WriteString(fileScanner.Text())
-	}
-
-	readFile.Close()
-	return builder.String()
+func Send(_, _, _, _ string) string {
+	//TODO: this is only used for when invoice try to use streaming instead when elvenlabs refill the quota
+	return ""
 }
+
+//14:42:24.12247
+//14:42:37.12377
+
+//14:45:24.12247
+//14:45:31.12317
