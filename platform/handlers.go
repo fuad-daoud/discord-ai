@@ -199,49 +199,75 @@ func streamMessage(channelId snowflake.ID, content, messageId, authorId string) 
 		panic(err)
 	}
 
-	streamResult := cohere.Stream(content, channelId.String(), cohere.Properties{
+	streamResult := cohere.StreamChat(content, channelId.String(), cohere.Properties{
 		MessageId: messageId,
 		UserId:    authorId,
-	}, func() {
-		updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String("Thinking🤔...")})
-		if err != nil {
-			panic(err)
-		}
-		err = Rest().AddReaction(channelId, message.ID, "🔵")
-		if err != nil {
-			panic(err)
-		}
-		dlog.Info("started message:", "ID", updateMessage.ID.String())
-	}, func() {
-		err = Rest().RemoveOwnReaction(channelId, message.ID, "🔵")
-		if err != nil {
-			panic(err)
-		}
-		err = Rest().AddReaction(channelId, message.ID, "🟢")
-		if err != nil {
-			panic(err)
-		}
-		dlog.Info("finished message:", "ID", message.ID)
 	})
 
-	tmp := ""
-	for {
-		if streamResult.Finished {
-			break
+	err = Rest().AddReaction(channelId, message.ID, "🌙")
+	if err != nil {
+		panic(err)
+	}
+
+	byteLength := 0
+	byteString := make([]byte, 1000)
+	newBytes := 0
+	for result := range streamResult {
+		dlog.Info("got result", "result type", result.Type)
+		switch result.Type {
+		case cohere.Start:
+			{
+				updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String("Thinking🤔...")})
+				if err != nil {
+					panic(err)
+				}
+				err = Rest().AddReaction(channelId, message.ID, "🔵")
+				if err != nil {
+					panic(err)
+				}
+				dlog.Debug("started message:", "ID", updateMessage.ID.String())
+				break
+			}
+		case cohere.Text:
+			{
+				go func() {
+					copiedBytes := copy(byteString[byteLength:], result.Message)
+					newBytes += copiedBytes
+					byteLength += copiedBytes
+					dlog.Info("got text event", "copied bytes:", copiedBytes, "message", result.Message)
+					if newBytes < 20 {
+						return
+					}
+					newBytes = 0
+
+					_, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String(string(byteString))})
+					if err != nil {
+						panic(err)
+					}
+					//dlog.Debug("updated message:", "ID", updateMessage.ID.String())
+				}()
+				break
+			}
+		case cohere.End:
+			{
+				updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String(result.Message)})
+				if err != nil {
+					panic(err)
+				}
+				dlog.Debug("updated message:", "ID", updateMessage.ID.String())
+
+				err = Rest().RemoveOwnReaction(channelId, message.ID, "🔵")
+				if err != nil {
+					panic(err)
+				}
+				err = Rest().AddReaction(channelId, message.ID, "🟢")
+				if err != nil {
+					panic(err)
+				}
+				dlog.Debug("finished message:", "ID", message.ID)
+				return
+			}
 		}
-		if streamResult.Message.Len() == 0 {
-			continue
-		}
-		stringMessage := streamResult.Message.String()
-		if tmp == stringMessage {
-			continue
-		}
-		tmp = stringMessage
-		updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: &stringMessage})
-		if err != nil {
-			panic(err)
-		}
-		dlog.Info("updated message:", "ID", updateMessage.ID.String())
 	}
 }
 
@@ -249,7 +275,7 @@ type Process func(message, messageId, userId, threadId string) string
 
 func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 	if event.Member.User.ID == Client().ID() {
-		dlog.Info("Update on bot voice state")
+		dlog.Debug("Update on bot voice state")
 		id := event.GenericGuildVoiceState.VoiceState.ChannelID
 		if id == nil {
 			dlog.Info("Disconnected from voice channel")
@@ -262,8 +288,8 @@ func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 
 func isCallingMe(message string) bool {
 	message = strings.ToLower(message)
-	prefixes := []string{"luna", "hey luna", "hello luna", "hello, luna", "you luna", "ya luna", "ola luna", "luna hello", "luna, hello"}
-	dlog.Info("detecting message", "message", message)
+	prefixes := []string{"luna", "hey luna", "hello luna", "hello, luna", "you luna", "ya luna", "ola luna", "luna hello", "luna, hello", "luan", "Luan"}
+	dlog.Debug("detecting message", "message", message)
 	for _, prefix := range prefixes {
 		if strings.HasPrefix(message, prefix) {
 			return true
@@ -271,25 +297,3 @@ func isCallingMe(message string) bool {
 	}
 	return false
 }
-
-//22:42:05.1057
-//22:42:24.10247
-
-//22:56:26.10267
-//22:56:55.10557
-
-//22:56:30.10307
-//22:56:30.10307
-//22:56:31.10317
-
-//23:36:47.10477
-//23:37:07.1077
-
-//23:38:44.10447
-//23:39:04.1047
-
-//23:39:36.10367
-//23:39:57.10577
-
-//11:45:54.11547
-//11:45:57.11577

@@ -202,7 +202,6 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 		return nil
 	}
 
-	//w.Write([]byte(s))
 	_, err = io.WriteString(h.writer, out.String()+"\n")
 	if err != nil {
 		return err
