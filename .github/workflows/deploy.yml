@@ -20,7 +20,18 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
     steps:
+      - name: Delete service to deploy a new one
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 165.22.92.220
+          username: root
+          password: 1234Test
+          script: |
+            pm2 stop ${{ vars.SERVICE }}
+            sleep 1s
+            pm2 delete ${{ vars.SERVICE }}
       - name: executing remote ssh commands using password
         uses: appleboy/ssh-action@v1.0.3
         with:
