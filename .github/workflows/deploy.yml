@@ -20,9 +20,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
     steps:
       - name: Delete service to deploy a new one
+        if: github.ref_type == 'tag'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 165.22.92.220
