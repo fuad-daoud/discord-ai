@@ -4,8 +4,10 @@ go 1.22
 
 require (
 	github.com/cohere-ai/cohere-go/v2 v2.8.2
+	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/deepgram/deepgram-go-sdk v1.3.5
 	github.com/disgoorg/disgo v0.18.7
+	github.com/disgoorg/disgolink/v3 v3.0.0
 	github.com/disgoorg/snowflake/v2 v2.0.1
 	github.com/gage-technologies/mistral-go v1.1.0
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757
@@ -14,7 +16,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/slog-multi v1.1.0
 	golang.org/x/net v0.21.0
-	gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302
 )
 
 require (

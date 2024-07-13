@@ -79,3 +79,7 @@ export RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 
 [//]: # ([![Top Langs]&#40;https://digitallands-readme.vercel.app/api/top-langs/?username=fuad-daoud&layout=pie&#41;]&#40;https://github.com/fuad-daoud/github-readme-stats&#41;)
 
+
+
+banners from
+https://www.asciiart.eu/text-to-ascii-art

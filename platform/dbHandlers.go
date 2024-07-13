@@ -125,20 +125,20 @@ func threadMessageCreateHandler(write db.Write, channel discord.Channel, member 
 func dbReadyHandler(event *events.Ready) {
 	db.InTransaction(func(write db.Write) {
 		for _, guild := range event.Guilds {
-			dlog.Info("Merging guild", "ID", guild.ID)
+			dlog.Debug("Merging guild", "ID", guild.ID)
 			guild, err := event.Client().Rest().GetGuild(guild.ID, false)
 			if err != nil {
 				dlog.Error(err.Error())
 				panic(err)
 			}
-			dlog.Info("Found guild", "name", guild.Name)
+			dlog.Debug("Found guild", "name", guild.Name)
 			guildNode := db.Guild{
 				Id:   guild.ID.String(),
 				Name: guild.Name,
 			}
 			write(cypher.MergeN("g", guildNode))
 
-			dlog.Info("Merged guild", "name", guild.Name)
+			dlog.Debug("Merged guild", "name", guild.Name)
 
 			addMembers(write, err, event, guild, guildNode)
 		}
@@ -152,7 +152,7 @@ func addMembers(write db.Write, err error, event *events.Ready, guild *discord.R
 		panic(err)
 	}
 	for _, member := range members {
-		dlog.Info("Found member", "name", member.User.Username, "id", member.User.ID)
+		dlog.Debug("Found member", "name", member.User.Username, "id", member.User.ID)
 
 		var avatar string
 		if member.User.AvatarURL() == nil {
@@ -167,7 +167,7 @@ func addMembers(write db.Write, err error, event *events.Ready, guild *discord.R
 		}
 		write(cypher.MergeN("mb", memberNode))
 
-		dlog.Info("Merged members", "name", member.EffectiveName())
+		dlog.Debug("Merged members", "name", member.EffectiveName())
 
 		write(cypher.MatchN("g", guildNode),
 			cypher.MatchN("m", memberNode),

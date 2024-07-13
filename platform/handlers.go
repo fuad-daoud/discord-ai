@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
@@ -146,10 +147,25 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 		streamMessage(newThread.ID(), messageContent, event.MessageID.String(), authorId.String())
 	}
 }
+func banner() string {
+	readFile, err := os.Open("./assets/banner.txt")
+	defer readFile.Close()
+	if err != nil {
+		dlog.Error(err.Error())
+		panic(err)
+	}
+	fileScanner := bufio.NewScanner(readFile)
 
+	fileScanner.Split(bufio.ScanLines)
+	builder := strings.Builder{}
+	for fileScanner.Scan() {
+		builder.WriteString(fileScanner.Text())
+	}
+
+	return builder.String()
+}
 func botIsUpReadyHandler(event *events.Ready) {
 	user, _ := event.Client().Caches().SelfUser()
-	dlog.Info("Bot is up!")
 	dlog.Info("Bot", "username", user.Username)
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -159,7 +175,7 @@ func botIsUpReadyHandler(event *events.Ready) {
 	if err != nil {
 		panic(err)
 	}
-	content := "I AM ALIVE in " + hostname + " IPs [ "
+	content := hostname + " IPs [ "
 	for _, ip := range ips {
 		content += ip.String() + " "
 	}
