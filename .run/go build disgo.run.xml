@@ -1,0 +1,27 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build disgo" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="discord-ai" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="ARCHIVE_CRON" value="@midnight" />
+      <env name="CLIENT_ID" value="1250722905734778904" />
+      <env name="CLIENT_SECRET" value="s8Ga5BH1jz4vGqNKluny_dgofukG773o" />
+      <env name="COHERE_INST" value="./artifacts/cohere-inst.txt" />
+      <env name="DEEPGRAM_API_KEY" value="b3e84a4a52bf9a59b9be90b1fe40af900adaef52" />
+      <env name="ELVENLABS_API_KEY" value="sk_e2438353e4b9a4b8c11242f4649e4c716101e0682b65cfa1" />
+      <env name="GPT_ASSISTANT" value="asst_YYfDsOKm93fnfKsnlht5Bb3Y" />
+      <env name="NEO4J_DATABASE_PASSWORD" value="neo4j" />
+      <env name="NEO4J_DATABASE_URL" value="neo4j://localhost:7687" />
+      <env name="NEO4J_DATABASE_USER" value="neo4j" />
+      <env name="OPENAI_API_KEY" value="sk-proj-AsgPdFnfbcgSNTBdZivIT3BlbkFJPVWizOOQqwPygX2ctH78" />
+      <env name="PORT" value="8080" />
+      <env name="RESPEECHER_API_KEY" value="DgB1A7jQlUBPEbKjH490bg" />
+      <env name="TOKEN" value="MTI1MzI4NjI0MzY4NTYzMDAyNA.G6aw13.X4Vg9L9BfRWkNJcVgSbcLnqe_GbKoydkhJ9krw" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/fuad-daoud/discord-ai/cmd/ai/main" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/disgo/main/main-ai.go" />
+    <method v="2" />
+  </configuration>
+</component>

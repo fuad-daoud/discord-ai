@@ -43,9 +43,9 @@ func TTS(text string) (*ffmpeg.AudioProvider, error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("xi-api-key", os.Getenv("ELVENLABS_API_KEY"))
 
-	dlog.Info("Sending request to elevenlabs.io")
+	dlog.Log.Info("Sending request to elevenlabs.io")
 	res, err := http.DefaultClient.Do(req)
-	dlog.Info("Got response from elevenlabs.io")
+	dlog.Log.Info("Got response from elevenlabs.io")
 	if err != nil {
 		return nil, err
 	}

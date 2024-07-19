@@ -3,6 +3,7 @@ package cohere
 import (
 	"bufio"
 	cohere "github.com/cohere-ai/cohere-go/v2"
+	"github.com/disgoorg/snowflake/v2"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
 	"os"
@@ -15,9 +16,9 @@ type CommandCall struct {
 }
 
 type Properties struct {
-	MessageId string `json:"message_id"`
-	UserId    string `json:"user_id"`
-	GuildId   string `json:"guild_id"`
+	MessageId string       `json:"message_id"`
+	UserId    snowflake.ID `json:"user_id"`
+	GuildId   snowflake.ID `json:"guild_id"`
 }
 type StreamResult struct {
 	Message string
@@ -95,7 +96,7 @@ func readInst() string {
 	readFile, err := os.Open(os.Getenv("COHERE_INST"))
 	defer readFile.Close()
 	if err != nil {
-		dlog.Error(err.Error())
+		dlog.Log.Error(err.Error())
 		panic(err)
 	}
 	fileScanner := bufio.NewScanner(readFile)

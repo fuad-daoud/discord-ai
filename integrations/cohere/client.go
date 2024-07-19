@@ -11,10 +11,11 @@ import (
 )
 
 func clientChatStream(ctx context.Context, request *cohere.ChatStreamRequest) *core.Stream[cohere.StreamedChatResponse] {
-	co := client.NewClient(client.WithToken("xLPWbInVLTliZHK8JbYxYrtoEpu6K4Y8KFjJVJZ5"))
+	//co := client.NewClient(client.WithToken("xLPWbInVLTliZHK8JbYxYrtoEpu6K4Y8KFjJVJZ5"))
+	co := client.NewClient(client.WithToken("6ZdYunaql4JpAxOjvr6IaKiOka3Rco10ppsKWs2C"))
 	chatStream, err := co.ChatStream(ctx, request)
 	if err != nil {
-		dlog.Error(err.Error())
+		dlog.Log.Error(err.Error())
 		panic(err)
 	}
 	return chatStream
@@ -47,14 +48,11 @@ func stream(context *StreamContext) {
 		if err != nil && !errors.Is(err, io.EOF) {
 			panic(err)
 		}
-		if response.EventType == "stream-start" {
-			dlog.Info("got event", "eventType", response.EventType, "response", response)
-		}
-		//dlog.Info("got event", "eventType", response.EventType, "response", response)
+		dlog.Log.Debug("got event", "eventType", response.EventType, "response", response)
 		context.response = response
 		go handleStreamEvent(context)
 		if response.EventType == "stream-end" || response.EventType == "tool-calls-generation" {
-			dlog.Info("got event", "eventType", response.EventType, "response", response)
+			dlog.Log.Info("got event", "eventType", response.EventType, "response", response)
 			break
 		}
 	}
@@ -62,39 +60,45 @@ func stream(context *StreamContext) {
 
 func handleStreamEvent(context *StreamContext) {
 	switch context.response.EventType {
-	//case "tool-calls-generation":
-	//	{
-	//		toolCalls := context.response.ToolCallsGeneration.ToolCalls
-	//		context.request.ToolResults = make([]*cohere.ToolResult, len(toolCalls))
-	//		for index, toolCall := range toolCalls {
-	//			Call <- &CommandCall{
-	//				ToolCall:        toolCall,
-	//				ExtraProperties: context.prop,
-	//			}
-	//			context.request.ToolResults[index] = <-Result
-	//		}
-	//		context.request.Message = ""
-	//		chatStream := clientChatStream(context.ctx, context.request)
-	//		for {
-	//			response, err := chatStream.Recv()
-	//			if err != nil && !errors.Is(err, io.EOF) {
-	//				panic(err)
-	//			}
-	//			dlog.Debug("got event", "eventType", response.EventType, "response", response)
-	//			context.response = response
-	//			go handleStreamEvent(context)
-	//			if response.EventType == "stream-end" {
-	//				break
-	//			}
-	//		}
-	//		break
-	//	}
+	case "tool-calls-generation":
+		{
+			toolCalls := context.response.ToolCallsGeneration.ToolCalls
+			context.request.ToolResults = make([]*cohere.ToolResult, len(toolCalls))
+			for index, toolCall := range toolCalls {
+				Call <- &CommandCall{
+					ToolCall:        toolCall,
+					ExtraProperties: context.prop,
+				}
+				context.request.ToolResults[index] = <-Result
+			}
+			context.request.Message = ""
+			chatStream := clientChatStream(context.ctx, context.request)
+			for {
+				response, err := chatStream.Recv()
+				if err != nil && !errors.Is(err, io.EOF) {
+					panic(err)
+				}
+				dlog.Log.Debug("got event", "eventType", response.EventType, "response", response)
+				context.response = response
+				go handleStreamEvent(context)
+				if response.EventType == "stream-end" {
+					break
+				}
+			}
+			break
+		}
 	case "stream-start":
-		//dlog.Info("TEST started stream")
 		go context.start()
 		break
 	case "stream-end":
-		//dlog.Info("TEST stopped stream")
+		reason := context.response.StreamEnd.FinishReason
+		if reason == cohere.ChatStreamEndEventFinishReasonError {
+			go context.end("something went wrong sorry dear")
+			break
+		} else if reason == cohere.ChatStreamEndEventFinishReasonErrorToxic {
+			go context.end("eww disgusting toxic")
+			break
+		}
 		go context.end(context.response.StreamEnd.Response.Text)
 		break
 	case "text-generation":

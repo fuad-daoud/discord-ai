@@ -19,9 +19,9 @@ func (c *MyCallback) Message(mr *api.MessageResponse) error {
 		return nil
 	}
 
-	dlog.Info("Deepgram", "Link", mr.Channel.Alternatives[0].Confidence, "sentence", sentence)
-	dlog.Info("Deepgram", "isFinal", mr.IsFinal)
-	dlog.Info("Deepgram", "isSpeachFinal", mr.SpeechFinal)
+	dlog.Log.Info("Deepgram", "Link", mr.Channel.Alternatives[0].Confidence, "sentence", sentence)
+	dlog.Log.Info("Deepgram", "isFinal", mr.IsFinal)
+	dlog.Log.Info("Deepgram", "isSpeachFinal", mr.SpeechFinal)
 	c.Builder.WriteString(sentence)
 	c.sentence = sentence
 	if mr.SpeechFinal {
@@ -51,22 +51,22 @@ func (c *MyCallback) UnhandledEvent(byData []byte) error {
 }
 
 func (c *MyCallback) Metadata(md *api.MetadataResponse) error {
-	dlog.Info("[Metadata] Received")
-	dlog.Info("Metadata", "RequestID", strings.TrimSpace(md.RequestID))
-	dlog.Info("Metadata", "Channels", md.Channels)
-	dlog.Info("Metadata", "Created", strings.TrimSpace(md.Created))
+	dlog.Log.Info("[Metadata] Received")
+	dlog.Log.Info("Metadata", "RequestID", strings.TrimSpace(md.RequestID))
+	dlog.Log.Info("Metadata", "Channels", md.Channels)
+	dlog.Log.Info("Metadata", "Created", strings.TrimSpace(md.Created))
 	return nil
 }
 
 func (c *MyCallback) UtteranceEnd(ur *api.UtteranceEndResponse) error {
-	dlog.Info("[UtteranceEnd] Received")
+	dlog.Log.Info("[UtteranceEnd] Received")
 	return nil
 }
 
 func (c *MyCallback) Error(er *api.ErrorResponse) error {
-	dlog.Error("[Error] Received")
-	dlog.Error("", "Type", er.Type)
-	dlog.Error("", "Message", er.Message)
-	dlog.Error("", "Description", er.Description)
+	dlog.Log.Error("[Error] Received")
+	dlog.Log.Error("", "Type", er.Type)
+	dlog.Log.Error("", "Message", er.Message)
+	dlog.Log.Error("", "Description", er.Description)
 	return nil
 }

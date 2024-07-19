@@ -1,4 +1,4 @@
-package prettylog
+package dlog
 
 import (
 	"bytes"
@@ -172,7 +172,23 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	if err != nil {
 		return err
 	}
-	bytes, err := json.MarshalIndent(attrs, "", "  ")
+	var file string
+	if _, ok := attrs["source"].(map[string]interface{}); ok {
+		source := attrs["source"].(map[string]interface{})
+		if _, ok2 := source["file"]; ok2 {
+			line := source["line"]
+			source["file"] = source["file"].(string) + ":" + strconv.Itoa(int(line.(float64)))
+			file = source["file"].(string)
+			delete(attrs, "source")
+			attrs["called_function"] = source["function"]
+		} else {
+			Log.Warn("provided 'source' is overridden may not print source of log")
+		}
+	} else {
+		Log.Warn("provided 'source' is overridden may not print source of log")
+	}
+
+	jsonBytes, err := json.MarshalIndent(attrs, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error when marshaling attrs: %w", err)
 	}
@@ -186,12 +202,16 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 		out.WriteString(level)
 		out.WriteString(" ")
 	}
+	if len(file) > 0 {
+		out.WriteString(file)
+		out.WriteString(" ")
+	}
 	if len(msg) > 0 {
 		out.WriteString(msg)
 		out.WriteString(" ")
 	}
-	if len(bytes) > 0 {
-		out.WriteString(colorize(green, string(bytes)))
+	if len(jsonBytes) > 0 {
+		out.WriteString(colorize(green, string(jsonBytes)))
 	}
 
 	if r.Level <= slog.LevelDebug {

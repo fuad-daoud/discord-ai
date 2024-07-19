@@ -14,7 +14,7 @@ func Setup() {
 	port := os.Getenv("PORT")
 	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
-		dlog.Error("Could not serve on " + port)
+		dlog.Log.Error("Could not serve on " + port)
 		panic(err)
 	}
 }

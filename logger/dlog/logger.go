@@ -1,40 +1,28 @@
 package dlog
 
 import (
-	"github.com/fuad-daoud/discord-ai/logger/dlog/prettylog"
-	"github.com/robfig/cron/v3"
 	slogmulti "github.com/samber/slog-multi"
 	"log/slog"
 	"os"
 )
 
+var Log *slog.Logger
 var multiLogger *slog.Logger
 var archiver = &Archiver{}
 
 func init() {
+	//slog.SetLogLoggerLevel(slog.LevelDebug)
 	setup()
 	multiLogger = createLogger()
 
-	c := cron.New()
-	entryID, err := c.AddFunc(os.Getenv("ARCHIVE_CRON"), archiver.process)
-	if err != nil {
-		panic(err)
-	}
-	c.Start()
-	Info("Created cron ", "entryID", entryID)
-}
-
-func Info(msg string, args ...any) {
-	multiLogger.Info(msg, args...)
-}
-func Error(msg string, args ...any) {
-	multiLogger.Error(msg, args...)
-}
-func Warn(msg string, args ...any) {
-	multiLogger.Warn(msg, args...)
-}
-func Debug(msg string, args ...any) {
-	multiLogger.Debug(msg, args...)
+	//c := cron.New()
+	//entryID, err := c.AddFunc(os.Getenv("ARCHIVE_CRON"), archiver.process)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//c.Start()
+	Log = multiLogger
+	//Log.Info("Created cron ", "entryID", entryID)
 }
 
 func setup() {
@@ -101,7 +89,7 @@ func getTextHandler(archiver *Archiver, opts *slog.HandlerOptions) slog.Handler 
 	}, opts)
 }
 
-func getPrettyHandler(archiver *Archiver, opts *slog.HandlerOptions) *prettylog.Handler {
+func getPrettyHandler(archiver *Archiver, opts *slog.HandlerOptions) *Handler {
 
 	filePretty, err := os.OpenFile("logs/pretty.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
@@ -112,7 +100,7 @@ func getPrettyHandler(archiver *Archiver, opts *slog.HandlerOptions) *prettylog.
 		panic(err)
 	}
 
-	return prettylog.NewHandler(prettylog.DualWriter{
+	return NewHandler(DualWriter{
 		Stdout: os.Stdout,
 		File: &BufferedFile{
 			Archiver:   archiver,

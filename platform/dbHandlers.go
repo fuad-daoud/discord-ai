@@ -11,7 +11,7 @@ import (
 )
 
 func dbThreadCreateHandler(event *events.ThreadCreate) {
-	dlog.Debug("Starting db ThreadCreateHandler")
+	dlog.Log.Debug("Starting db ThreadCreateHandler")
 	if event.Thread.OwnerID != event.Client().ApplicationID() {
 		return
 	}
@@ -37,11 +37,11 @@ func dbThreadCreateHandler(event *events.ThreadCreate) {
 			cypher.Merge("(mb)-[:CREATED]->(t)"),
 		)
 	})
-	dlog.Debug("Finished DB ThreadCreateHandler")
+	dlog.Log.Debug("Finished DB ThreadCreateHandler")
 }
 
 func dbMessageUpdateHandler(event *events.GuildMessageUpdate) {
-	dlog.Debug("Starting DB MessageUpdateHandler")
+	dlog.Log.Debug("Starting DB MessageUpdateHandler")
 	if event.Message.Flags == discord.MessageFlagHasThread && event.OldMessage.ChannelID == event.ChannelID {
 		return
 	}
@@ -60,14 +60,14 @@ func dbMessageUpdateHandler(event *events.GuildMessageUpdate) {
 			}),
 			cypher.Return("m"))
 	})
-	dlog.Debug("Finished DB MessageUpdateHandler")
+	dlog.Log.Debug("Finished DB MessageUpdateHandler")
 }
 
 func dbMessageCreateHandler(event *events.GuildMessageCreate) {
 	if event.Message.Type == discord.MessageTypeThreadStarterMessage {
 		return
 	}
-	dlog.Debug("Starting DB messageCreateHandler")
+	dlog.Log.Debug("Starting DB messageCreateHandler")
 	restClient := event.Client().Rest()
 	channel, _ := restClient.GetChannel(event.ChannelID)
 
@@ -87,7 +87,7 @@ func dbMessageCreateHandler(event *events.GuildMessageCreate) {
 			createMessageHandler(write, channel, event.GuildID.String(), member, message)
 		}
 	})
-	dlog.Debug("Finished DB messageCreateHandler")
+	dlog.Log.Debug("Finished DB messageCreateHandler")
 }
 
 func createMessageHandler(write db.Write, channel discord.Channel, guildId string, member db.Member, message db.Message) {
@@ -125,20 +125,20 @@ func threadMessageCreateHandler(write db.Write, channel discord.Channel, member 
 func dbReadyHandler(event *events.Ready) {
 	db.InTransaction(func(write db.Write) {
 		for _, guild := range event.Guilds {
-			dlog.Debug("Merging guild", "ID", guild.ID)
+			dlog.Log.Debug("Merging guild", "ID", guild.ID)
 			guild, err := event.Client().Rest().GetGuild(guild.ID, false)
 			if err != nil {
-				dlog.Error(err.Error())
+				dlog.Log.Error(err.Error())
 				panic(err)
 			}
-			dlog.Debug("Found guild", "name", guild.Name)
+			dlog.Log.Debug("Found guild", "name", guild.Name)
 			guildNode := db.Guild{
 				Id:   guild.ID.String(),
 				Name: guild.Name,
 			}
 			write(cypher.MergeN("g", guildNode))
 
-			dlog.Debug("Merged guild", "name", guild.Name)
+			dlog.Log.Debug("Merged guild", "name", guild.Name)
 
 			addMembers(write, err, event, guild, guildNode)
 		}
@@ -148,11 +148,11 @@ func dbReadyHandler(event *events.Ready) {
 func addMembers(write db.Write, err error, event *events.Ready, guild *discord.RestGuild, guildNode db.Guild) {
 	members, err := event.Client().Rest().GetMembers(guild.ID, 1000, snowflake.MustParse("0"))
 	if err != nil {
-		dlog.Error("Failed to get members", "guild", guild.ID, "error", err)
+		dlog.Log.Error("Failed to get members", "guild", guild.ID, "error", err)
 		panic(err)
 	}
 	for _, member := range members {
-		dlog.Debug("Found member", "name", member.User.Username, "id", member.User.ID)
+		dlog.Log.Debug("Found member", "name", member.User.Username, "id", member.User.ID)
 
 		var avatar string
 		if member.User.AvatarURL() == nil {
@@ -167,7 +167,7 @@ func addMembers(write db.Write, err error, event *events.Ready, guild *discord.R
 		}
 		write(cypher.MergeN("mb", memberNode))
 
-		dlog.Debug("Merged members", "name", member.EffectiveName())
+		dlog.Log.Debug("Merged members", "name", member.EffectiveName())
 
 		write(cypher.MatchN("g", guildNode),
 			cypher.MatchN("m", memberNode),

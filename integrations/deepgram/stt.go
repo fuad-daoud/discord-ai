@@ -5,6 +5,7 @@ import (
 	deepgramLive "github.com/deepgram/deepgram-go-sdk/pkg/client/live"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
+	"os"
 	"strings"
 )
 
@@ -27,14 +28,14 @@ func Write(p []byte, userId string) {
 	_, err := deepgramClient.Write(p)
 	if err != nil {
 		if clients[userId] == nil {
-			dlog.Info("Stopping deepgram writing because deepgramLive is stopped")
+			dlog.Log.Info("Stopping deepgram writing because deepgramLive is stopped")
 		} else if strings.EqualFold(err.Error(), "websocket: close sent") {
-			dlog.Info("Stopping deepgram writing because", "err", err.Error())
+			dlog.Log.Info("Stopping deepgram writing because", "err", err.Error())
 		} else {
 			return
 		}
 	}
-	//dlog.Info("deepgram reading", "bytes", voiceBytes)
+	//dlog.Log.Info("deepgram reading", "bytes", voiceBytes)
 }
 
 func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.Client {
@@ -42,8 +43,9 @@ func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.
 	if !ok {
 		// Configuration for the Client deepgramLive
 		ctx := context.Background()
-		apiKey := "b3e84a4a52bf9a59b9be90b1fe40af900adaef52"
-		dlog.Info("Using API key:", "key", apiKey)
+
+		apiKey := os.Getenv("DEEPGRAM_API_KEY")
+
 		clientOptions := interfaces.ClientOptions{
 			APIKey:          "",
 			Host:            "",
@@ -95,7 +97,7 @@ func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.
 			panic("deepgramLive.Connect failed")
 		}
 
-		dlog.Info("Connected to deepgram client!", "userId", userId)
+		dlog.Log.Info("Connected to deepgram client!", "userId", userId)
 
 		go stopWhenFinished(userId, callback, finishedCallback)
 		clients[userId] = dgClient
@@ -108,7 +110,7 @@ type FinishedCallBack func(message string, userId string)
 
 func stopWhenFinished(userId string, callback *MyCallback, finishedCallback FinishedCallBack) {
 	finished := <-callback.SpeechFinal
-	dlog.Info("channel SpeechFinal triggered", "speechfinal", finished)
+	dlog.Log.Info("channel SpeechFinal triggered", "speechfinal", finished)
 	if finished {
 		finishedCallback(callback.sentence, userId)
 		StopUser(userId)
@@ -118,7 +120,7 @@ func stopWhenFinished(userId string, callback *MyCallback, finishedCallback Fini
 func Stop() {
 	for userId, _ := range clients {
 		StopUser(userId)
-		dlog.Info("Stopped Client deepgram for", "userId", userId)
+		dlog.Log.Info("Stopped Client deepgram for", "userId", userId)
 	}
 	clients = make(map[string]*deepgramLive.Client)
 }
@@ -126,9 +128,9 @@ func Stop() {
 func StopUser(userId string) {
 	err := clients[userId].Finalize()
 	if err != nil {
-		dlog.Error(err.Error())
+		dlog.Log.Error(err.Error())
 	}
 	//clients[userId].Stop()
 	delete(clients, userId)
-	dlog.Info("removed client deepgram for", "userId", userId)
+	dlog.Log.Info("removed client deepgram for", "userId", userId)
 }
