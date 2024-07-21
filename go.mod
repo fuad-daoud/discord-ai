@@ -3,6 +3,7 @@ module github.com/fuad-daoud/discord-ai
 go 1.22
 
 require (
+	github.com/aws/aws-sdk-go v1.54.20
 	github.com/cohere-ai/cohere-go/v2 v2.8.2
 	github.com/deepgram/deepgram-go-sdk v1.3.5
 	github.com/disgoorg/disgo v0.18.7
@@ -29,6 +30,7 @@ require (
 	github.com/gorilla/schema v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/samber/lo v1.38.1 // indirect
