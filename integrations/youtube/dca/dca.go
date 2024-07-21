@@ -9,6 +9,7 @@ import (
 	"io"
 	"layeh.com/gopus"
 	"log"
+	"os"
 )
 
 const (
@@ -32,12 +33,14 @@ func DCA(in io.Reader) chan []byte {
 	OpusEncoder.SetApplication(gopus.Audio)
 
 	ResultChan := make(chan []byte)
+	OutputChan := make(chan []byte)
 
 	go func() {
 		var err error
 		defer func() {
-			dlog.Log.Info("closing channel ResultChan finished")
+			dlog.Log.Info("closing channel ResultChan,OutputChan finished")
 			close(ResultChan)
+			close(OutputChan)
 		}()
 		stdin := bufio.NewReaderSize(in, 32768)
 		for {
@@ -52,6 +55,7 @@ func DCA(in io.Reader) chan []byte {
 					return
 				}
 				ResultChan <- bytes
+				OutputChan <- bytes
 				return
 			}
 			if err != nil {
@@ -63,6 +67,37 @@ func DCA(in io.Reader) chan []byte {
 				return
 			}
 			ResultChan <- bytes
+			OutputChan <- bytes
+		}
+	}()
+	go func() {
+		create, err := os.Create("test.opus")
+		if err != nil {
+			panic(err)
+		}
+		stdout := bufio.NewWriterSize(create, 16384)
+		defer func() {
+			err := stdout.Flush()
+			if err != nil {
+				log.Println("error flushing stdout, ", err)
+			}
+		}()
+		for {
+			bytes, ok := <-OutputChan
+			if !ok {
+				break
+			}
+			opuslen := int16(len(bytes))
+			err = binary.Write(stdout, binary.LittleEndian, &opuslen)
+			if err != nil {
+				dlog.Log.Error("error writing output", "err", err)
+				return
+			}
+			err = binary.Write(stdout, binary.LittleEndian, &bytes)
+			if err != nil {
+				dlog.Log.Error("error writing output", "err", err)
+				return
+			}
 		}
 	}()
 	return ResultChan
