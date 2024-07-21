@@ -16,7 +16,7 @@ func TestYoutubeProgress(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	youtube := Youtube{
+	youtube := Ytdlp{
 		Process: func(seg []byte) {
 
 		},
@@ -27,7 +27,7 @@ func TestYoutubeProgress(t *testing.T) {
 			dlog.Log.Error("Something wrong happened", "err", input)
 		},
 	}
-	youtube.Download(id)
+	youtube.download(id)
 	//t.Errorf("got %q, wanted %q", got, want)
 }
 

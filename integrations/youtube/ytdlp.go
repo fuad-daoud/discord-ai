@@ -2,7 +2,7 @@ package youtube
 
 import (
 	"encoding/json"
-	"github.com/fuad-daoud/discord-ai/integrations/youtube/dca"
+	"github.com/fuad-daoud/discord-ai/audio"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
@@ -14,59 +14,49 @@ import (
 	"time"
 )
 
-type Youtube struct {
-	Process       func(seg []byte)
+type Ytdlp struct {
 	Progress      func(percentage float64)
 	ProgressError func(input string)
 }
 
-func (y Youtube) Play(link string) {
+func (y Ytdlp) GetAudio(link string) (*[][]byte, error) {
 	data, err := y.VideoPackets(link)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	for {
-		seg, ok := <-data
-		if !ok {
-			break
+	segmants := make([][]byte, 0)
+
+	go func() {
+		for {
+			seg, ok := <-data
+			if !ok {
+				break
+			}
+			segmants = append(segmants, seg)
 		}
-		go y.Process(seg)
-	}
+	}()
+	return &segmants, nil
 }
 
-func (y Youtube) VideoPackets(link string) (chan []byte, error) {
-	outputChannel, err := y.convert(link)
+func (y Ytdlp) VideoPackets(link string) (chan []byte, error) {
+	download := y.download(link)
+	outputChannel, err := y.convert(download)
 	if err != nil {
 		return nil, err
 	}
 	return outputChannel, nil
 }
 
-func (y Youtube) convert(link string) (chan []byte, error) {
-
-	cmd := exec.CommandContext(context.Background(), "ffmpeg",
-		"-i",
-		"pipe:0",
-		"-f", "s16le",
-		"-ar", "48000",
-		"-ac", "2",
-		"pipe:1",
-	)
-
-	cmd.Stdin = y.Download(link)
-
-	pipe, err := cmd.StdoutPipe()
+func (y Ytdlp) convert(in io.Reader) (chan []byte, error) {
+	ffmpeg, err := audio.FFMPEG(in)
 	if err != nil {
 		return nil, err
 	}
-	dlog.Log.Info("starting ffmeg")
-	if err = cmd.Start(); err != nil {
-		return nil, err
-	}
-	return dca.DCA(pipe), nil
+
+	return audio.DCA(ffmpeg), nil
 }
 
-func (y Youtube) Download(link string) io.Reader {
+func (y Ytdlp) download(link string) io.Reader {
 	start := time.Now()
 	newUUID, err := uuid.NewUUID()
 	if err != nil {

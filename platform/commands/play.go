@@ -2,15 +2,14 @@ package commands
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
+	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/voice"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/integrations/youtube"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/fuad-daoud/discord-ai/platform"
-	"io"
-	"os"
+	"strings"
 )
 
 func play(call *cohere.CommandCall) {
@@ -18,88 +17,43 @@ func play(call *cohere.CommandCall) {
 	dlog.Log.Info("play call", "params", call.ToolCall.Parameters)
 	toolCall := call.ToolCall
 
-	//message, err := platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
-	//	Content: "Downloading ...",
-	//})
-	//if err != nil {
-	//	panic(err)
-	//}
-	packets := make([][]byte, 0)
-	open, err := os.Open("test.opus")
+	message, err := platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
+		Content: "Downloading ...",
+	})
 	if err != nil {
 		panic(err)
 	}
-	var opuslen int16
+	//open, err := os.Open("test.opus")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//packets, err := audio.ReadDCA(open)
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	for {
-		// Read opus frame length from dca file.
-		err = binary.Read(open, binary.LittleEndian, &opuslen)
-
-		// If this is the end of the file, just return.
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			err := open.Close()
-			if err != nil {
-				panic(err)
-			}
-			break
-		}
-
-		if err != nil {
-			fmt.Println("Error reading from dca file :", err)
-			panic(err)
-		}
-
-		// Read encoded pcm from dca file.
-		InBuf := make([]byte, opuslen)
-		err = binary.Read(open, binary.LittleEndian, &InBuf)
-
-		// Should not be any end of file errors
-		if err != nil {
-			fmt.Println("Error reading from dca file :", err)
-			panic(err)
-		}
-
-		// Append encoded pcm data to the buffer.
-		packets = append(packets, InBuf)
+	y := youtube.Ytdlp{
+		Progress:      progress(call, message),
+		ProgressError: progressError(),
 	}
 
-	//y := youtube.Youtube{
-	//	Process: func(seg []byte) {
-	//		packets = append(packets, seg)
-	//		go func() {
-	//			if err != nil {
-	//				dlog.Log.Error("faced an err writing", "err", err)
-	//			}
-	//		}()
-	//	},
-	//	Progress: func(percentage float64) {
-	//		dlog.Log.Info("Progress ", "percentage", percentage)
-	//		_, err := platform.Rest().UpdateMessage(call.ExtraProperties.ChannelId, message.ID, discord.MessageUpdate{
-	//			Content: cohere.String(fmt.Sprintf("Downloading %v%%", percentage)),
-	//		})
-	//		if err != nil {
-	//			panic(err)
-	//		}
-	//	},
-	//	ProgressError: func(input string) {
-	//		dlog.Log.Error("something wrong happened", "input", input)
-	//	},
-	//}
-	//
-	//dlog.Log.Info("call", "params", call.ToolCall.Parameters)
-	//
-	//information := call.ToolCall.Parameters["information"].(string)
-	//if !strings.HasPrefix(information, "https://") {
-	//	information = youtube.Search(information).Url
-	//}
-	//go y.Play(information)
+	dlog.Log.Info("call", "params", call.ToolCall.Parameters)
+
+	information := call.ToolCall.Parameters["information"].(string)
+	if !strings.HasPrefix(information, "https://") {
+		information = youtube.Search(information).Url
+	}
+	packets, err := y.GetAudio(information)
+	if err != nil {
+		panic(err)
+	}
 
 	conn, problem := getConn(call)
 	if problem {
 		return
 	}
 	player := youtube.DefaultPlayer{
-		Segments: &packets,
+		Segments: packets,
 		Conn:     conn,
 		Playing:  false,
 	}
@@ -116,6 +70,24 @@ func play(call *cohere.CommandCall) {
 				"Description": "song playing successfully",
 			},
 		},
+	}
+}
+
+func progress(call *cohere.CommandCall, message *discord.Message) func(percentage float64) {
+	return func(percentage float64) {
+		dlog.Log.Info("Progress ", "percentage", percentage)
+		_, err := platform.Rest().UpdateMessage(call.ExtraProperties.ChannelId, message.ID, discord.MessageUpdate{
+			Content: cohere.String(fmt.Sprintf("Downloading %v%%", percentage)),
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func progressError() func(input string) {
+	return func(input string) {
+		dlog.Log.Error("something wrong happened", "input", input)
 	}
 }
 
