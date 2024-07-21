@@ -7,12 +7,14 @@ import (
 	"golang.org/x/net/context"
 	"os"
 	"strings"
+	"sync"
 )
 
 var (
 	clients              = make(map[string]*deepgramLive.Client)
 	silentPacketsCounter = make(map[string]int)
 	silentPacket         = []byte{0xF8, 0xFF, 0xFE}
+	m                    = sync.Mutex{}
 )
 
 const (
@@ -39,6 +41,8 @@ func Write(p []byte, userId string) {
 }
 
 func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.Client {
+	m.Lock()
+	defer m.Unlock()
 	client, ok := clients[userId]
 	if !ok {
 		// Configuration for the Client deepgramLive
@@ -63,7 +67,7 @@ func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.
 			Diarize:         false,
 			DiarizeVersion:  "",
 			Encoding:        "opus",
-			Endpointing:     "80",
+			Endpointing:     "100",
 			Extra:           nil,
 			FillerWords:     true,
 			InterimResults:  true,

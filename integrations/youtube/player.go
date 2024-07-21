@@ -8,11 +8,10 @@ import (
 
 type Player interface {
 	Run()
-	Start()
 	Stop()
 	Pause()
 	Resume()
-	Seek(time time.Time)
+	Seek(time time.Duration)
 }
 
 type DefaultPlayer struct {
@@ -20,6 +19,7 @@ type DefaultPlayer struct {
 	currentIndex int
 	inst         InstructionType
 	Conn         voice.Conn
+	Playing      bool
 }
 
 type Instruction struct {
@@ -37,6 +37,7 @@ const (
 )
 
 func (p *DefaultPlayer) Run() {
+	p.Playing = true
 	go p.run()
 }
 
@@ -50,6 +51,7 @@ func (p *DefaultPlayer) run() {
 			{
 				seg := *p.Segments
 				if p.currentIndex >= len(seg) {
+					time.Sleep(2 * time.Second)
 					dlog.Log.Info("Finished segments")
 					break
 				}
@@ -61,22 +63,17 @@ func (p *DefaultPlayer) run() {
 		case Pause:
 			{
 				dlog.Log.Info("Got Pause instruction")
-				//err := p.Conn.SetSpeaking(context.Background(), voice.SpeakingFlagNone)
-				//if err != nil {
-				//	panic(err)
-				//}
+				p.Playing = true
 				return
 			}
 		case Stop:
 			{
 				dlog.Log.Info("Got Stop instruction")
-				//err := p.Conn.SetSpeaking(context.Background(), voice.SpeakingFlagNone)
-				//if err != nil {
-				//	panic(err)
-				//}
 				p.currentIndex = 0
+				p.Playing = true
 				return
 			}
+
 		}
 	}
 }
@@ -90,7 +87,6 @@ func (p *DefaultPlayer) writeCurrentSeg() {
 		panic(err)
 	}
 }
-
 func (p *DefaultPlayer) Pause() {
 	p.inst = Pause
 }

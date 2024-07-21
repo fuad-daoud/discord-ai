@@ -11,9 +11,13 @@ import (
 type Command string
 
 const (
-	Join  Command = "command_join"
-	Leave Command = "command_leave"
-	Play  Command = "command_play"
+	Join   Command = "command_join"
+	Leave  Command = "command_leave"
+	Play   Command = "command_play"
+	Pause  Command = "command_pause"
+	Stop   Command = "command_stop"
+	Resume Command = "command_resume"
+	Search Command = "command_search"
 )
 
 func AddCommandsChannelOnReadyHandler() {
@@ -37,6 +41,18 @@ func AddCommandsChannelOnReadyHandler() {
 				break
 			case Play:
 				go play(call)
+				break
+			case Pause:
+				go pause(call)
+				break
+			case Stop:
+				go stop(call)
+				break
+			case Resume:
+				go resume(call)
+				break
+			case Search:
+				go search(call)
 				break
 			default:
 				{
@@ -135,7 +151,7 @@ func join(call *cohere.CommandCall) {
 	}
 	dlog.Log.Info("wrote silent frame successfully")
 
-	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties.MessageId)
+	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties)
 
 	cohere.Result <- &cohere.CommandResult{
 		Call: call.ToolCall,

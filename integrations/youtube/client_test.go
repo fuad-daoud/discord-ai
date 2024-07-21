@@ -30,3 +30,8 @@ func TestYoutubeProgress(t *testing.T) {
 	youtube.Download(id)
 	//t.Errorf("got %q, wanted %q", got, want)
 }
+
+func TestYoutubeSearch(t *testing.T) {
+	search := Search("cute cats")
+	dlog.Log.Info("output of search", "search", search)
+}

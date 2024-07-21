@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"io"
 	"layeh.com/gopus"
 	"log"
@@ -19,7 +20,7 @@ const (
 )
 
 func DCA(in io.Reader) chan []byte {
-
+	dlog.Log.Info("starting dca")
 	OpusEncoder, err := gopus.NewEncoder(AudioFrameRate, AudioChannels, gopus.Audio)
 	if err != nil {
 		fmt.Println("NewEncoder Error:", err)
@@ -35,6 +36,7 @@ func DCA(in io.Reader) chan []byte {
 	go func() {
 		var err error
 		defer func() {
+			dlog.Log.Info("closing channel ResultChan finished")
 			close(ResultChan)
 		}()
 		stdin := bufio.NewReaderSize(in, 32768)

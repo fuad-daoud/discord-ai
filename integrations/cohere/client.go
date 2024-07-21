@@ -8,11 +8,13 @@ import (
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
 	"io"
+	"os"
 )
 
 func clientChatStream(ctx context.Context, request *cohere.ChatStreamRequest) *core.Stream[cohere.StreamedChatResponse] {
 	//co := client.NewClient(client.WithToken("xLPWbInVLTliZHK8JbYxYrtoEpu6K4Y8KFjJVJZ5"))
-	co := client.NewClient(client.WithToken("6ZdYunaql4JpAxOjvr6IaKiOka3Rco10ppsKWs2C"))
+	//co := client.NewClient(client.WithToken("6ZdYunaql4JpAxOjvr6IaKiOka3Rco10ppsKWs2C"))
+	co := client.NewClient(client.WithToken(os.Getenv("COHERE_API_KEY")))
 	chatStream, err := co.ChatStream(ctx, request)
 	if err != nil {
 		dlog.Log.Error(err.Error())
@@ -70,6 +72,7 @@ func handleStreamEvent(context *StreamContext) {
 					ExtraProperties: context.prop,
 				}
 				context.request.ToolResults[index] = <-Result
+				dlog.Log.Info("got result", "result", context.request.ToolResults[index])
 			}
 			context.request.Message = ""
 			chatStream := clientChatStream(context.ctx, context.request)

@@ -16,9 +16,10 @@ type CommandCall struct {
 }
 
 type Properties struct {
-	MessageId string       `json:"message_id"`
-	UserId    snowflake.ID `json:"user_id"`
-	GuildId   snowflake.ID `json:"guild_id"`
+	MessageId snowflake.ID
+	UserId    snowflake.ID
+	GuildId   snowflake.ID
+	ChannelId snowflake.ID
 }
 type StreamResult struct {
 	Message string
@@ -54,7 +55,7 @@ var (
 		},
 		{
 			Name:        "command_play",
-			Description: "play a youtube video given information about it",
+			Description: "if not provided use call command_search to get the link first, play a youtube video given its link",
 			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{
 				"information": {
 					Description: cohere.String("information about the song or the youtube link of a video"),
@@ -62,6 +63,32 @@ var (
 					Required:    cohere.Bool(true),
 				},
 			},
+		},
+		{
+			Name:        "command_search",
+			Description: "find youtube link",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{
+				"information": {
+					Description: cohere.String("information about the song or the youtube link of a video"),
+					Type:        "str",
+					Required:    cohere.Bool(true),
+				},
+			},
+		},
+		{
+			Name:                 "command_pause",
+			Description:          "pause the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_stop",
+			Description:          "stop the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_resume",
+			Description:          "resume the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
 		},
 	}
 )

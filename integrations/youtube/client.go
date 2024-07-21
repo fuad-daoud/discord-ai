@@ -1,8 +1,10 @@
 package youtube
 
 import (
+	"encoding/json"
 	"github.com/fuad-daoud/discord-ai/integrations/youtube/dca"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
+	"github.com/google/uuid"
 	"golang.org/x/net/context"
 	"io"
 	"os"
@@ -18,8 +20,8 @@ type Youtube struct {
 	ProgressError func(input string)
 }
 
-func (y Youtube) Play(id string) {
-	data, err := y.VideoPackets(id)
+func (y Youtube) Play(link string) {
+	data, err := y.VideoPackets(link)
 	if err != nil {
 		panic(err)
 	}
@@ -32,15 +34,15 @@ func (y Youtube) Play(id string) {
 	}
 }
 
-func (y Youtube) VideoPackets(id string) (chan []byte, error) {
-	outputChannel, err := y.convert(id)
+func (y Youtube) VideoPackets(link string) (chan []byte, error) {
+	outputChannel, err := y.convert(link)
 	if err != nil {
 		return nil, err
 	}
 	return outputChannel, nil
 }
 
-func (y Youtube) convert(id string) (chan []byte, error) {
+func (y Youtube) convert(link string) (chan []byte, error) {
 
 	cmd := exec.CommandContext(context.Background(), "ffmpeg",
 		"-i",
@@ -51,22 +53,25 @@ func (y Youtube) convert(id string) (chan []byte, error) {
 		"pipe:1",
 	)
 
-	cmd.Stdin = y.Download(id)
+	cmd.Stdin = y.Download(link)
 
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-
+	dlog.Log.Info("starting ffmeg")
 	if err = cmd.Start(); err != nil {
 		return nil, err
 	}
 	return dca.DCA(pipe), nil
 }
 
-func (y Youtube) Download(id string) io.Reader {
+func (y Youtube) Download(link string) io.Reader {
 	start := time.Now()
-
+	newUUID, err := uuid.NewUUID()
+	if err != nil {
+		panic(err)
+	}
 	cmd := exec.CommandContext(context.Background(), "/home/fuad/GolandProjects/discord-ai/artifacts/yt-dlp",
 		"--progress-template", "%(progress._percent_str)s",
 		"--progress-delta", "1",
@@ -81,9 +86,9 @@ func (y Youtube) Download(id string) io.Reader {
 		//"--color", "no_color",
 		//"--no-colors",
 		"--progress",
-		"--output", "/tmp/audio/"+id,
+		"--output", "/tmp/audio/"+newUUID.String(),
 		//"--simulate",
-		"https://www.youtube.com/watch?v="+id,
+		link,
 	)
 
 	dlog.Log.Info("starting youtube command")
@@ -149,10 +154,46 @@ func (y Youtube) Download(id string) io.Reader {
 	elapsed := time.Since(start)
 	dlog.Log.Info("time for ytdlp", "duration", elapsed.Seconds())
 
-	open, err := os.Open("/tmp/audio/" + id + ".opus")
+	open, err := os.Open("/tmp/audio/" + newUUID.String() + ".opus")
 	if err != nil {
 		panic(err)
 	}
 
 	return open
+}
+
+func Search(query string) Data {
+	cmd := exec.CommandContext(context.Background(), "yt-dlp",
+		"ytsearch1:"+query,
+		"-j",
+		"--concurrent-fragments", "16",
+		"--audio-format", "opus",
+		"--quiet",
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		panic(err)
+	}
+	var data Data
+	err = json.Unmarshal(output, &data)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+type Data struct {
+	Id             string   `json:"id"`
+	FullTitle      string   `json:"fulltitle"`
+	Tags           []string `json:"tags"`
+	Categories     []string `json:"categories"`
+	ViewCount      int      `json:"view_count"`
+	Thumbnail      string   `json:"thumbnail"`
+	Description    string   `json:"description"`
+	DurationString string   `json:"duration_string"`
+	LikeCount      int      `json:"like_count"`
+	Channel        string   `json:"channel"`
+	UploaderId     string   `json:"uploader_id"`
+	Url            string   `json:"original_url"`
 }

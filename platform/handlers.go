@@ -7,8 +7,6 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/voice"
 	"github.com/disgoorg/snowflake/v2"
-	"github.com/fuad-daoud/discord-ai/db"
-	"github.com/fuad-daoud/discord-ai/db/cypher"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
@@ -18,19 +16,129 @@ import (
 	"strings"
 )
 
-func HandleDeepgramVoicePackets(conn voice.Conn, messageId string) {
+func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.FinishedCallBack {
+
+	return func(message string, userId string) {
+		dlog.Log.Info("finished call back starting ...", "userId", userId)
+		snowflakeUserId := snowflake.MustParse(userId)
+		user, err := Rest().GetUser(snowflakeUserId)
+		if err != nil {
+			dlog.Log.Error("could not get user: ", userId, err)
+		}
+		if !(isCallingMe(message)) {
+			return
+		}
+
+		userState, userStateOk := Cache().VoiceState(properties.GuildId, snowflakeUserId)
+		if !userStateOk {
+			dlog.Log.Error("Member voice state not okay")
+		}
+		err = Client().UpdateVoiceState(context.Background(), properties.GuildId, userState.ChannelID, false, true)
+		if err != nil {
+			dlog.Log.Error("could not update voice state: ", err)
+		}
+
+		//MATCH (m:Message {id: "1255887883848646769"}), (t:Thread) MATCH shortestPath((m)-[*]->(t)) RETURN m,t
+		handleThread(properties.ChannelId, *user, message)
+
+		processingMessage := "Dazzling✨💫"
+
+		selfUser, b := Cache().SelfUser()
+		if !b {
+			dlog.Log.Error("could not get self user")
+		}
+		messageId := handleThread(properties.ChannelId, selfUser.User, processingMessage)
+
+		//err = Rest().AddReaction(channelId, message.ID, "🌙")
+		//if err != nil {
+		//	panic(err)
+		//}
+
+		streamResult := cohere.StreamChat(message, properties.ChannelId.String(), cohere.Properties{
+			MessageId: properties.MessageId,
+			UserId:    snowflake.MustParse(userId),
+			GuildId:   properties.GuildId,
+			ChannelId: properties.ChannelId,
+		})
+
+		byteLength := 0
+		byteString := make([]byte, 1000)
+		newBytes := 0
+		for result := range streamResult {
+			dlog.Log.Debug("got result", "result type", result.Type)
+			switch result.Type {
+			case cohere.Start:
+				{
+
+					updateMessage, err := Rest().UpdateMessage(properties.ChannelId, messageId, discord.MessageUpdate{Content: cohere.String("Hmmm🤔... ")})
+					if err != nil {
+						panic(err)
+					}
+					err = Rest().AddReaction(properties.ChannelId, messageId, "🔵")
+					if err != nil {
+						panic(err)
+					}
+					dlog.Log.Debug("started message:", "ID", updateMessage.ID.String())
+					break
+				}
+			case cohere.Text:
+				{
+					go func() {
+						copiedBytes := copy(byteString[byteLength:], result.Message)
+						newBytes += copiedBytes
+						byteLength += copiedBytes
+						if newBytes < 20 {
+							return
+						}
+						newBytes = 0
+
+						_, err := Rest().UpdateMessage(properties.ChannelId, messageId, discord.MessageUpdate{Content: cohere.String(string(byteString))})
+						if err != nil {
+							panic(err)
+						}
+						//dlog.Log.Debug("updated message:", "ID", updateMessage.ID.String())
+					}()
+					break
+				}
+			case cohere.End:
+				{
+					updateMessage, err := Rest().UpdateMessage(properties.ChannelId, messageId, discord.MessageUpdate{Content: cohere.String(result.Message)})
+					if err != nil {
+						panic(err)
+					}
+					dlog.Log.Debug("updated message:", "ID", updateMessage.ID.String())
+
+					err = Rest().RemoveOwnReaction(properties.ChannelId, messageId, "🔵")
+					if err != nil {
+						panic(err)
+					}
+					err = Rest().AddReaction(properties.ChannelId, messageId, "🟢")
+					if err != nil {
+						panic(err)
+					}
+					dlog.Log.Debug("finished message:", "ID", messageId)
+
+					err = Client().UpdateVoiceState(context.Background(), properties.GuildId, userState.ChannelID, false, false)
+
+					return
+				}
+			}
+		}
+
+		//audioProvider, err := elevenlabs.TTS(response)
+
+		//conn.SetOpusFrameProvider(audioProvider)
+
+		if err != nil {
+			dlog.Log.Error("could not update voice state: ", err)
+		}
+	}
+}
+
+func HandleDeepgramVoicePackets(conn voice.Conn, props cohere.Properties) {
 
 	dlog.Log.Info("Added packets handler")
 	guildID := conn.GuildID()
-	result := db.Query(cypher.MatchN("m", db.Message{Id: messageId}), "-[]-", "(t:Thread)", cypher.Return("t"))
-	thread, _ := cypher.ParseKey[db.TextChannel]("t", result)
-	Cache().VoiceStatesForEach(guildID, func(state discord.VoiceState) {
-		Cache().VoiceStatesForEach(guildID, func(state discord.VoiceState) {
-			if state.ChannelID == conn.ChannelID() {
-				deepgram.MakeClient(state.UserID.String(), finishedCallBack(conn, guildID, thread))
-			}
-		})
-	})
 
 	for {
 		packet, err := conn.UDP().ReadPacket()
@@ -45,60 +153,22 @@ func HandleDeepgramVoicePackets(conn voice.Conn, messageId string) {
 			continue
 		}
 		userId := conn.UserIDBySSRC(packet.SSRC)
-		deepgram.MakeClient(userId.String(), finishedCallBack(conn, guildID, thread))
+		if userId.String() == "0" {
+			continue
+		}
+		deepgram.MakeClient(userId.String(), finishedCallBack(conn, props))
 		deepgram.Write(packet.Opus, userId.String())
 	}
 }
 
-func finishedCallBack(conn voice.Conn, guildId snowflake.ID, thread db.TextChannel) deepgram.FinishedCallBack {
-
-	return func(message string, userId string) {
-		dlog.Log.Info("finished call back starting ...", "userId", userId)
-		snowflakeUserId := snowflake.MustParse(userId)
-		user, err := Rest().GetUser(snowflakeUserId)
-		if err != nil {
-			dlog.Log.Error("could not get user: ", userId, err)
-		}
-		if !(isCallingMe(message)) {
-			return
-		}
-
-		userState, userStateOk := Cache().VoiceState(guildId, snowflakeUserId)
-		if !userStateOk {
-			dlog.Log.Error("Member voice state not okay")
-		}
-		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, true)
-		if err != nil {
-			dlog.Log.Error("could not update voice state: ", err)
-		}
-
-		//MATCH (m:Message {id: "1255887883848646769"}), (t:Thread) MATCH shortestPath((m)-[*]->(t)) RETURN m,t
-		messageId := handleThread(thread.Id, *user, message)
-		response := cohere.Send(message, messageId, userId, thread.Id)
-
-		//audioProvider, err := elevenlabs.TTS(response)
-
-		selfUser, b := Cache().SelfUser()
-		if !b {
-			dlog.Log.Error("could not get self user")
-		}
-		go handleThread(thread.Id, selfUser.User, response)
-		//conn.SetOpusFrameProvider(audioProvider)
-		err = Client().UpdateVoiceState(context.Background(), guildId, userState.ChannelID, false, false)
-		if err != nil {
-			dlog.Log.Error("could not update voice state: ", err)
-		}
-	}
-}
-
-func handleThread(threadId string, user discord.User, message string) string {
+func handleThread(threadId snowflake.ID, user discord.User, message string) snowflake.ID {
 	message = fmt.Sprintf("%s: %s", user.Username, message)
-	createMessage, err := Rest().CreateMessage(snowflake.MustParse(threadId), discord.MessageCreate{Content: message})
+	createMessage, err := Rest().CreateMessage(threadId, discord.MessageCreate{Content: message})
 	if err != nil {
 		panic(err)
 	}
 	dlog.Log.Info("Created message", "ID", createMessage.ID)
-	return createMessage.ID.String()
+	return createMessage.ID
 }
 
 func messageCreateHandler(event *events.GuildMessageCreate) {
@@ -118,9 +188,10 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 		thread := channel.(discord.GuildThread)
 		dlog.Log.Info("Got thread", "ID", thread.ID())
 		streamMessage(thread.ID(), messageContent, cohere.Properties{
-			MessageId: event.MessageID.String(),
+			MessageId: event.MessageID,
 			UserId:    authorId,
 			GuildId:   event.GuildID,
+			ChannelId: thread.ID(),
 		})
 	} else {
 		if channel.ID().String() != "1252273230727876619" && channel.ID().String() != "1252536839886082109" && channel.ID().String() != "1256856679379636276" {
@@ -148,9 +219,10 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 			panic(err)
 		}
 		streamMessage(newThread.ID(), messageContent, cohere.Properties{
-			MessageId: event.MessageID.String(),
+			MessageId: event.MessageID,
 			UserId:    authorId,
 			GuildId:   event.GuildID,
+			ChannelId: newThread.ID(),
 		})
 	}
 }
