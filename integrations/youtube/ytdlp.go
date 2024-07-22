@@ -2,7 +2,10 @@ package youtube
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fuad-daoud/discord-ai/audio"
+	"github.com/fuad-daoud/discord-ai/integrations/digitalocean"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
@@ -17,10 +20,14 @@ import (
 type Ytdlp struct {
 	Progress      func(percentage float64)
 	ProgressError func(input string)
+	Data          Data
 }
 
-func (y Ytdlp) GetAudio(link string) (*[][]byte, error) {
-	data, err := y.VideoPackets(link)
+func (y *Ytdlp) GetAudio() (*[][]byte, error) {
+	if !y.Data.filled {
+		return nil, errors.New("did not search for Data first")
+	}
+	result, err := y.videoPackets()
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +35,7 @@ func (y Ytdlp) GetAudio(link string) (*[][]byte, error) {
 
 	go func() {
 		for {
-			seg, ok := <-data
+			seg, ok := <-result
 			if !ok {
 				break
 			}
@@ -38,25 +45,22 @@ func (y Ytdlp) GetAudio(link string) (*[][]byte, error) {
 	return &segmants, nil
 }
 
-func (y Ytdlp) VideoPackets(link string) (chan []byte, error) {
-	download := y.download(link)
-	outputChannel, err := y.convert(download)
+func (y *Ytdlp) videoPackets() (chan []byte, error) {
+	ytdlpAudio := y.download()
+
+	ffmpeg, err := audio.FFMPEG(ytdlpAudio)
 	if err != nil {
 		return nil, err
 	}
-	return outputChannel, nil
-}
-
-func (y Ytdlp) convert(in io.Reader) (chan []byte, error) {
-	ffmpeg, err := audio.FFMPEG(in)
-	if err != nil {
-		return nil, err
+	dca := audio.DCA{
+		Cache: func(filePath string) {
+			y.cache(filePath)
+		},
 	}
-
-	return audio.DCA(ffmpeg), nil
+	return dca.Convert(ffmpeg), nil
 }
 
-func (y Ytdlp) download(link string) io.Reader {
+func (y *Ytdlp) download() io.Reader {
 	start := time.Now()
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
@@ -78,7 +82,7 @@ func (y Ytdlp) download(link string) io.Reader {
 		"--progress",
 		"--output", "/tmp/audio/"+newUUID.String(),
 		//"--simulate",
-		link,
+		y.Data.Url,
 	)
 
 	dlog.Log.Info("starting youtube command")
@@ -170,7 +174,28 @@ func Search(query string) Data {
 	if err != nil {
 		panic(err)
 	}
+	data.filled = true
 	return data
+}
+
+func (y *Ytdlp) cache(filePath string) {
+	tagsJson, _ := json.Marshal(y.Data.Tags)
+	categoriesJson, _ := json.Marshal(y.Data.Categories)
+
+	digitalocean.Upload(filePath, "/youtube/cache/"+y.Data.Id+".opus", map[string]*string{
+		"Id":         aws.String(y.Data.Id),
+		"FullTitle":  aws.String(y.Data.FullTitle),
+		"Tags":       aws.String(string(tagsJson)),
+		"Categories": aws.String(string(categoriesJson)),
+		"ViewCount":  aws.String(strconv.Itoa(y.Data.ViewCount)),
+		"Thumbnail":  aws.String(y.Data.Thumbnail),
+		//"Description":    aws.String(y.Data.Description),
+		"DurationString": aws.String(y.Data.DurationString),
+		"LikeCount":      aws.String(strconv.Itoa(y.Data.LikeCount)),
+		"Channel":        aws.String(y.Data.Channel),
+		"UploaderId":     aws.String(y.Data.UploaderId),
+		"Url":            aws.String(y.Data.Url),
+	})
 }
 
 type Data struct {
@@ -186,4 +211,5 @@ type Data struct {
 	Channel        string   `json:"channel"`
 	UploaderId     string   `json:"uploader_id"`
 	Url            string   `json:"original_url"`
+	filled         bool
 }

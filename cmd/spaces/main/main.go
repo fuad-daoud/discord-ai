@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	// Step 2: Define the parameters for the session you want to create.
 	key := "DO006HT8YM4CZHXNLL6D"                           // Access key pair. You can create access key pairs using the control panel or API.
 	secret := "hU5t7MNPk1iU/yPnmS3XPUCcwtFIvA2njO01ASX4eAU" // Secret access key defined through an environment variable.
@@ -56,12 +55,13 @@ func main() {
 
 	input := s3.GetObjectInput{
 		Bucket: aws.String("discord-ai"), // The path to the directory you want to upload the object to, starting with your Space name.
-		Key:    aws.String("youtube/cache/test.txt"),
+		Key:    aws.String("youtube/cache/test.opus"),
 	}
 	getObject, err := s3Client.GetObject(&input)
 	if err != nil {
 		panic(err)
 	}
+
 	bytes, err := io.ReadAll(getObject.Body)
 	if err != nil {
 		panic(err)

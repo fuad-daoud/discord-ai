@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/voice"
+	"github.com/fuad-daoud/discord-ai/audio"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
+	"github.com/fuad-daoud/discord-ai/integrations/digitalocean"
 	"github.com/fuad-daoud/discord-ai/integrations/youtube"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/fuad-daoud/discord-ai/platform"
-	"strings"
 )
 
 func play(call *cohere.CommandCall) {
@@ -17,35 +18,34 @@ func play(call *cohere.CommandCall) {
 	dlog.Log.Info("play call", "params", call.ToolCall.Parameters)
 	toolCall := call.ToolCall
 
-	message, err := platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
-		Content: "Downloading ...",
-	})
-	if err != nil {
-		panic(err)
-	}
-	//open, err := os.Open("test.opus")
-	//if err != nil {
-	//	panic(err)
-	//}
-	//packets, err := audio.ReadDCA(open)
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	y := youtube.Ytdlp{
-		Progress:      progress(call, message),
-		ProgressError: progressError(),
-	}
-
-	dlog.Log.Info("call", "params", call.ToolCall.Parameters)
-
 	information := call.ToolCall.Parameters["information"].(string)
-	if !strings.HasPrefix(information, "https://") {
-		information = youtube.Search(information).Url
-	}
-	packets, err := y.GetAudio(information)
-	if err != nil {
-		panic(err)
+	data := youtube.Search(information)
+
+	var packets *[][]byte
+	download := digitalocean.Download("youtube/cache/" + data.Id + ".opus")
+	if download != nil {
+		var err error
+		packets, err = audio.ReadDCA(download.Body)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		message, err := platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
+			Content: "Downloading ...",
+		})
+		if err != nil {
+			panic(err)
+		}
+		y := youtube.Ytdlp{
+			Progress:      progress(call, message),
+			ProgressError: progressError(),
+			Data:          data,
+		}
+
+		packets, err = y.GetAudio()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	conn, problem := getConn(call)

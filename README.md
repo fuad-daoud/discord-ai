@@ -85,3 +85,4 @@ export RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 
 banners from
 https://www.asciiart.eu/text-to-ascii-art
+https://go.dev/talks/2012/waza.slide#1

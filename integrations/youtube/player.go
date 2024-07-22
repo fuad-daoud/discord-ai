@@ -46,12 +46,15 @@ func (p *DefaultPlayer) run() {
 
 	p.inst = Resume
 	for {
+		seg := *p.Segments
+		if len(seg) == 0 {
+			time.Sleep(2 * time.Second)
+			continue
+		}
 		switch p.inst {
 		case nextSeg, Resume:
 			{
-				seg := *p.Segments
 				if p.currentIndex >= len(seg) {
-					time.Sleep(2 * time.Second)
 					dlog.Log.Info("Finished segments")
 					break
 				}

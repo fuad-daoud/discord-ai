@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
+	"github.com/google/uuid"
 	"io"
 	"layeh.com/gopus"
 	"log"
@@ -13,16 +14,11 @@ import (
 )
 
 const (
-	AudioChannels  = 2
-	AudioFrameRate = 48000
-	AudioBitrate   = 64
-	AudioFrameSize = 960
-	MaxBytes       = (AudioFrameSize * AudioChannels) * 2 // max size of opus data
-)
-
-var (
-	resultChan = make(chan []byte)
-	outputChan = make(chan []byte)
+	audioChannels  = 2
+	audioFrameRate = 48000
+	audioBitrate   = 64
+	audioFrameSize = 960
+	maxBytes       = (audioFrameSize * audioChannels) * 2 // max size of opus data
 )
 
 func ReadDCA(in io.ReadCloser) (*[][]byte, error) {
@@ -58,90 +54,110 @@ func ReadDCA(in io.ReadCloser) (*[][]byte, error) {
 	return &packets, nil
 }
 
-func DCA(in io.Reader) chan []byte {
-	dlog.Log.Info("starting dca")
-	resultChan = make(chan []byte)
-	outputChan = make(chan []byte)
-	go process(in)
-	go write()
-	return resultChan
+type DCA struct {
+	resultChan chan []byte
+	outputChan chan []byte
+	Cache      func(opusFile string)
 }
 
-func process(in io.Reader) {
-	OpusEncoder, err := gopus.NewEncoder(AudioFrameRate, AudioChannels, gopus.Audio)
+func (d *DCA) Convert(in io.Reader) chan []byte {
+	dlog.Log.Info("starting dca")
+	d.resultChan = make(chan []byte)
+	d.outputChan = make(chan []byte)
+	go d.process(in)
+	go d.write()
+	return d.resultChan
+}
+
+func (d *DCA) process(in io.Reader) {
+	OpusEncoder, err := gopus.NewEncoder(audioFrameRate, audioChannels, gopus.Audio)
 	if err != nil {
 		fmt.Println("NewEncoder Error:", err)
 		panic(err)
 	}
 
-	OpusEncoder.SetBitrate(AudioBitrate * 1000)
+	OpusEncoder.SetBitrate(audioBitrate * 1000)
 
 	OpusEncoder.SetApplication(gopus.Audio)
 	defer func() {
 		dlog.Log.Info("closing channel ResultChan,OutputChan finished")
-		close(resultChan)
-		close(outputChan)
+		close(d.resultChan)
+		close(d.outputChan)
 	}()
 	stdin := bufio.NewReaderSize(in, 32768)
 	for {
-		buf := make([]int16, AudioFrameSize*AudioChannels)
+		buf := make([]int16, audioFrameSize*audioChannels)
 		err = binary.Read(stdin, binary.LittleEndian, &buf)
 		if err == io.EOF {
 			return
 		}
 		if errors.Is(err, io.ErrUnexpectedEOF) {
-			bytes, err := encode(OpusEncoder, buf)
+			opus, err := encode(OpusEncoder, buf)
 			if err != nil {
 				return
 			}
-			resultChan <- bytes
-			outputChan <- bytes
+			d.resultChan <- opus
+			d.outputChan <- opus
 			return
 		}
 		if err != nil {
 			log.Println("error reading from stdin,", err)
 			return
 		}
-		bytes, err := encode(OpusEncoder, buf)
+		opus, err := encode(OpusEncoder, buf)
 		if err != nil {
 			return
 		}
-		resultChan <- bytes
-		outputChan <- bytes
+		d.resultChan <- opus
+		d.outputChan <- opus
 	}
 }
-func write() {
-	create, err := os.Create("test.opus")
+func (d *DCA) write() {
+	newUUID, err := uuid.NewUUID()
 	if err != nil {
 		panic(err)
 	}
-	stdout := bufio.NewWriterSize(create, 16384)
+	fileName := newUUID.String() + ".opus"
+	filePath := "/home/fuad/test/" + fileName
+	create, err := os.Create(filePath)
+	if err != nil {
+		panic(err)
+	}
+	buffer := bufio.NewWriter(create)
 	defer func() {
-		err := stdout.Flush()
+		err := buffer.Flush()
 		if err != nil {
 			dlog.Log.Error("error flushing stdout", "err", err)
+			panic(err)
 		}
+		err = create.Close()
+		if err != nil {
+			dlog.Log.Error("error flushing stdout", "err", err)
+			panic(err)
+		}
+		d.Cache(filePath)
 	}()
 	for {
-		bytes, ok := <-outputChan
+		opus, ok := <-d.outputChan
 		if !ok {
 			break
 		}
-		opuslen := int16(len(bytes))
-		err = binary.Write(stdout, binary.LittleEndian, &opuslen)
+		opuslen := int16(len(opus))
+		err := binary.Write(buffer, binary.LittleEndian, &opuslen)
 		if err != nil {
 			dlog.Log.Error("error writing output", "err", err)
 			return
 		}
-		err = binary.Write(stdout, binary.LittleEndian, &bytes)
+		err = binary.Write(buffer, binary.LittleEndian, &opus)
 		if err != nil {
 			dlog.Log.Error("error writing output", "err", err)
 			return
 		}
 	}
 }
+
 func encode(OpusEncoder *gopus.Encoder, buf []int16) ([]byte, error) {
-	opus, err := OpusEncoder.Encode(buf, AudioFrameSize, MaxBytes)
+	opus, err := OpusEncoder.Encode(buf, audioFrameSize, maxBytes)
 	if err != nil {
 		fmt.Println("Encoding Error:", err)
 		return nil, err
