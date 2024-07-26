@@ -58,6 +58,7 @@ echo "${PREFIX}FINISHED TASK[3]${RESET}"
 
 echo "${PREFIX}FINISHED ALL TASKS${RESET}"
 
+apt install yt-dlp --yes
 
 
 #use to ssh sshpass -p 1234Test ssh root@165.22.92.220

@@ -2,29 +2,65 @@ package commands
 
 import (
 	"github.com/disgoorg/disgo/voice"
-	"github.com/disgoorg/snowflake/v2"
-	"github.com/fuad-daoud/discord-ai/db"
-	"github.com/fuad-daoud/discord-ai/db/cypher"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
-	"github.com/fuad-daoud/discord-ai/integrations/elevenlabs"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/fuad-daoud/discord-ai/platform"
 	"golang.org/x/net/context"
 )
 
+type Command string
+
+const (
+	Join   Command = "command_join"
+	Leave  Command = "command_leave"
+	Play   Command = "command_play"
+	Pause  Command = "command_pause"
+	Stop   Command = "command_stop"
+	Resume Command = "command_resume"
+	Skip   Command = "command_skip"
+	Search Command = "command_search"
+	Queue  Command = "command_queue"
+)
+
 func AddCommandsChannelOnReadyHandler() {
 	go func() {
+		//call := &cohere.CommandCall{
+		//	ToolCall: nil,
+		//	ExtraProperties: cohere.Properties{
+		//		MessageId: "1262490536577601777",
+		//		UserId:    468494540852953089,
+		//		GuildId:   847908927554322432,
+		//	},
+		//}
+		//play(call)
 		for call := range cohere.Call {
-
-			guildId := getGuildId(call.ExtraProperties.MessageId)
-			call.ExtraProperties.GuildId = guildId
-
-			switch call.Name {
-			case "command_join":
-				go joinFunction(call)
+			switch Command(call.Name) {
+			case Join:
+				go join(call)
 				break
-			case "command_leave":
+			case Leave:
 				go leave(call)
+				break
+			case Play:
+				go play(call)
+				break
+			case Pause:
+				go pause(call)
+				break
+			case Stop:
+				go stop(call)
+				break
+			case Resume:
+				go resume(call)
+				break
+			case Skip:
+				go skip(call)
+				break
+			case Queue:
+				go queue(call)
+				break
+			case Search:
+				go search(call)
 				break
 			default:
 				{
@@ -42,42 +78,15 @@ func AddCommandsChannelOnReadyHandler() {
 			}
 		}
 	}()
+
 }
 
-func getGuildId(messageId string) string {
-	m := cypher.MatchN("m", db.Message{Id: messageId})
-	r := cypher.Return("g")
-	result := db.Query(
-		m,
-		"-[:CONTAINS]-(t:Thread)-[:CHILD]-(c:TextChannel)-[:HAS]-(g:Guild)",
-		r,
-	)
-	guild, parsed := cypher.ParseKey[db.Guild]("g", result)
-	if !parsed {
-		result = db.Query(
-			m,
-			"-[:CONTAINS]-(c:TextChannel)-[:HAS]-(g)",
-			r,
-		)
-		guild, parsed = cypher.ParseKey[db.Guild]("g", result)
-		if !parsed {
-			panic("Can't find guild")
-		}
-	}
-	return guild.Id
-}
-
-func joinFunction(call *cohere.CommandCall) {
-	dlog.Info("starting join function")
-	toolCall := call.ToolCall
-
-	guildId := snowflake.MustParse(call.ExtraProperties.GuildId)
-	userId := snowflake.MustParse(call.ExtraProperties.UserId)
-
-	voiceState, b := platform.Cache().VoiceState(guildId, userId)
+func join(call *cohere.CommandCall) {
+	dlog.Log.Info("starting join function")
+	voiceState, b := platform.Cache().VoiceState(call.ExtraProperties.GuildId, call.ExtraProperties.UserId)
 	if !b {
 		cohere.Result <- &cohere.CommandResult{
-			Call: toolCall,
+			Call: call.ToolCall,
 			Outputs: []map[string]interface{}{
 				{
 					"Success":     false,
@@ -88,12 +97,12 @@ func joinFunction(call *cohere.CommandCall) {
 		return
 	}
 
-	botState, botStateOk := platform.Cache().VoiceState(guildId, platform.Client().ApplicationID())
-	userState, userStateOk := platform.Cache().VoiceState(guildId, userId)
+	botState, botStateOk := platform.Cache().VoiceState(call.ExtraProperties.GuildId, platform.Client().ApplicationID())
+	userState, userStateOk := platform.Cache().VoiceState(call.ExtraProperties.GuildId, call.ExtraProperties.UserId)
 
 	if botStateOk && userStateOk && (botState.ChannelID.String() == userState.ChannelID.String()) {
 		cohere.Result <- &cohere.CommandResult{
-			Call: toolCall,
+			Call: call.ToolCall,
 			Outputs: []map[string]interface{}{
 				{
 					"Success":     false,
@@ -104,12 +113,14 @@ func joinFunction(call *cohere.CommandCall) {
 		return
 	}
 
-	conn := platform.Client().VoiceManager().CreateConn(guildId)
-	dlog.Info("Staring joinVoiceChannel function")
+	dlog.Log.Info("joining voice channel")
+
+	conn := platform.Client().VoiceManager().CreateConn(call.ExtraProperties.GuildId)
 
 	if err := conn.Open(context.Background(), *voiceState.ChannelID, false, false); err != nil {
+		dlog.Log.Error("error opening voice channel", "error", err)
 		cohere.Result <- &cohere.CommandResult{
-			Call: toolCall,
+			Call: call.ToolCall,
 			Outputs: []map[string]interface{}{
 				{
 					"Success":     false,
@@ -119,10 +130,10 @@ func joinFunction(call *cohere.CommandCall) {
 		}
 		return
 	}
-	dlog.Info("opened connection successfully")
 	if err := conn.SetSpeaking(context.Background(), voice.SpeakingFlagMicrophone); err != nil {
+		dlog.Log.Error("error setting speaking flag", "error", err)
 		cohere.Result <- &cohere.CommandResult{
-			Call: toolCall,
+			Call: call.ToolCall,
 			Outputs: []map[string]interface{}{
 				{
 					"Success":     false,
@@ -132,10 +143,11 @@ func joinFunction(call *cohere.CommandCall) {
 		}
 		return
 	}
-	dlog.Info("set speaking successfully")
+	dlog.Log.Info("set speaking successfully")
 	if _, err := conn.UDP().Write(voice.SilenceAudioFrame); err != nil {
+		dlog.Log.Error("failed to write silence audio frame", "error", err)
 		cohere.Result <- &cohere.CommandResult{
-			Call: toolCall,
+			Call: call.ToolCall,
 			Outputs: []map[string]interface{}{
 				{
 					"Success":     false,
@@ -145,27 +157,28 @@ func joinFunction(call *cohere.CommandCall) {
 		}
 		return
 	}
-	dlog.Info("wrote silent frame successfully")
+	dlog.Log.Info("wrote silent frame successfully")
 
-	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties.MessageId)
+	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties)
 
 	cohere.Result <- &cohere.CommandResult{
-		Call: toolCall,
+		Call: call.ToolCall,
 		Outputs: []map[string]interface{}{
 			{
-				"Success":     false,
+				"Success":     true,
 				"Description": "connected",
 			},
 		},
 	}
-	audioProvider, err := elevenlabs.TTS("I am here !!")
-	if err != nil {
-		//panic(err)
-		return
-	}
 
-	conn.SetOpusFrameProvider(audioProvider)
+	//audioProvider, err := elevenlabs.TTS("I am here !!")
+	//if err != nil {
+	//panic(err)
+	//return
+	//}
 
-	dlog.Info("Finished joining function")
+	//conn.SetOpusFrameProvider(provider)
+
+	dlog.Log.Info("Finished joining function")
 	return
 }

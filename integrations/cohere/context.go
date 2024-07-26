@@ -3,6 +3,7 @@ package cohere
 import (
 	"bufio"
 	cohere "github.com/cohere-ai/cohere-go/v2"
+	"github.com/disgoorg/snowflake/v2"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
 	"os"
@@ -15,9 +16,10 @@ type CommandCall struct {
 }
 
 type Properties struct {
-	MessageId string `json:"message_id"`
-	UserId    string `json:"user_id"`
-	GuildId   string `json:"guild_id"`
+	MessageId snowflake.ID
+	UserId    snowflake.ID
+	GuildId   snowflake.ID
+	ChannelId snowflake.ID
 }
 type StreamResult struct {
 	Message string
@@ -53,7 +55,7 @@ var (
 		},
 		{
 			Name:        "command_play",
-			Description: "play a youtube video given information about it",
+			Description: "if not provided use call command_search to get the link first, play a youtube video given its link",
 			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{
 				"information": {
 					Description: cohere.String("information about the song or the youtube link of a video"),
@@ -61,6 +63,42 @@ var (
 					Required:    cohere.Bool(true),
 				},
 			},
+		},
+		{
+			Name:        "command_search",
+			Description: "find youtube link",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{
+				"information": {
+					Description: cohere.String("information about the song or the youtube link of a video"),
+					Type:        "str",
+					Required:    cohere.Bool(true),
+				},
+			},
+		},
+		{
+			Name:                 "command_pause",
+			Description:          "pause the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_stop",
+			Description:          "stop the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_resume",
+			Description:          "resume the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_skip",
+			Description:          "skip the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_queue",
+			Description:          "list songs in queue, list them in each on separate line",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
 		},
 	}
 )
@@ -95,7 +133,7 @@ func readInst() string {
 	readFile, err := os.Open(os.Getenv("COHERE_INST"))
 	defer readFile.Close()
 	if err != nil {
-		dlog.Error(err.Error())
+		dlog.Log.Error(err.Error())
 		panic(err)
 	}
 	fileScanner := bufio.NewScanner(readFile)

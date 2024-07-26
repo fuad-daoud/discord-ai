@@ -13,7 +13,7 @@ type Archiver struct {
 }
 
 func (a *Archiver) process() {
-	Info("Started process")
+	Log.Info("Started process")
 	a.processing = true
 	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 
@@ -30,13 +30,13 @@ func (a *Archiver) process() {
 
 	err = os.MkdirAll(archiveDir, os.ModePerm)
 	if err != nil {
-		Error("Failed to create log directory", "error", err)
+		Log.Error("Failed to create log directory", "error", err)
 		return
 	}
 
 	dir, err := os.ReadDir("logs")
 	if err != nil {
-		Error("Failed to read log directory", "dir", err)
+		Log.Error("Failed to read log directory", "dir", err)
 		return
 	}
 
@@ -44,24 +44,24 @@ func (a *Archiver) process() {
 		if entry.Type() == 0 {
 			old, err := os.OpenFile("logs/"+entry.Name(), os.O_RDONLY, 0600)
 			if err != nil {
-				Error("Failed to open file", "fileName", "logs/"+entry.Name(), "err", err)
+				Log.Error("Failed to open file", "fileName", "logs/"+entry.Name(), "err", err)
 				return
 			}
 			newLogs, err := os.OpenFile(archiveDir+"/"+entry.Name(), os.O_WRONLY|os.O_CREATE, 0600)
 			if err != nil {
-				Error("Failed to open file", "fileName", archiveDir+"/"+entry.Name(), "err", err)
+				Log.Error("Failed to open file", "fileName", archiveDir+"/"+entry.Name(), "err", err)
 				return
 			}
 			written, err := copyFiles(newLogs, old)
 			if err != nil {
-				Error("Failed to write log", "fileName", entry.Name(), "error", err)
+				Log.Error("Failed to write log", "fileName", entry.Name(), "error", err)
 				return
 			}
-			Info("Copied log", "fileName", entry.Name(), "written", written)
+			Log.Info("Copied log", "fileName", entry.Name(), "written", written)
 
 			err = os.Truncate("logs/"+entry.Name(), 0)
 			if err != nil {
-				Error("Failed to truncate file", "fileName", entry.Name(), "err", err)
+				Log.Error("Failed to truncate file", "fileName", entry.Name(), "err", err)
 				return
 			}
 		}

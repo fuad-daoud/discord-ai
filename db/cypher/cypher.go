@@ -16,6 +16,7 @@ func MatchN(key string, val any) string {
 func Match(stmt string) string {
 	return "MATCH " + stmt
 }
+
 func Merge(stmt string) string {
 	return "MERGE " + stmt
 }
@@ -34,6 +35,10 @@ func Set(key string, val any) string {
 
 func Return(keys ...string) string {
 	return "RETURN " + strings.Join(keys, ",")
+
+}
+func Delete(keys ...string) string {
+	return "DELETE " + strings.Join(keys, ",")
 
 }
 
@@ -75,11 +80,31 @@ func ToProperties(val any) string {
 				continue
 			}
 			stringBuilder.WriteString(fmt.Sprintf(`%s: "%v",`, key, value))
+			break
+		case []interface{}:
+			stringBuilder.WriteString(fmt.Sprintf(`%s: `, key))
+			stringBuilder.WriteString("[")
+			elements := value.([]interface{})
+			if len(elements) != 0 {
+				stringBuilder.WriteString(fmt.Sprintf(`"%v"`, elements[0]))
+			}
+			for i, element := range elements {
+				if i == 0 {
+					continue
+				}
+				stringBuilder.WriteString(", ")
+				stringBuilder.WriteString(fmt.Sprintf(`"%v"`, element))
+			}
+			stringBuilder.WriteString("],")
+			break
 		default:
 			stringBuilder.WriteString(fmt.Sprintf(`%s: %v,`, key, value))
 		}
 	}
 	cypherProperties := stringBuilder.String()
+	if len(cypherProperties) == 1 {
+		return ""
+	}
 	cypherProperties = cypherProperties[:len(cypherProperties)-1]
 	cypherProperties = cypherProperties + "}"
 	return cypherProperties
@@ -105,7 +130,7 @@ func ParseAll[KeyValue any](key string, eagerResult *neo4j.EagerResult) ([]KeyVa
 	for _, record := range eagerResult.Records {
 		get, b := record.Get(key)
 		if !b {
-			dlog.Error("Invalid key", "key", key)
+			dlog.Log.Error("Invalid key", "key", key)
 			panic("Invalid key")
 		}
 		node := get.(neo4j.Node)
@@ -126,7 +151,7 @@ func ParseKey[KeyValue any](key string, eagerResult *neo4j.EagerResult) (KeyValu
 
 	get, b := eagerResult.Records[0].Get(key)
 	if !b {
-		dlog.Error("Invalid key", "key", key)
+		dlog.Log.Error("Invalid key", "key", key)
 		panic("Invalid key")
 	}
 	node := get.(neo4j.Node)
@@ -146,7 +171,7 @@ func Parse2Key[FirstKeyValue any, SecondKeyValue any](firstKey, secondKey string
 
 	get, b := eagerResult.Records[0].Get(firstKey)
 	if !b {
-		dlog.Error("Invalid key", "key", &firstKey)
+		dlog.Log.Error("Invalid key", "key", &firstKey)
 		panic("Invalid key")
 	}
 	firstResult = parse[FirstKeyValue](get.(neo4j.Node).Props)
@@ -155,7 +180,7 @@ func Parse2Key[FirstKeyValue any, SecondKeyValue any](firstKey, secondKey string
 	}
 	get, b = eagerResult.Records[1].Get(secondKey)
 	if !b {
-		dlog.Error("Invalid key", "key", secondKey)
+		dlog.Log.Error("Invalid key", "key", secondKey)
 		panic("Invalid key")
 	}
 	secondResult = parse[SecondKeyValue](get.(neo4j.Node).Props)
@@ -166,7 +191,7 @@ func parse[RESULT any](props map[string]any) RESULT {
 	var result RESULT
 	err := mapstructure.Decode(props, &result)
 	if err != nil {
-		dlog.Error("Failed to decode result", "err", err)
+		dlog.Log.Error("Failed to decode result", "err", err)
 		panic(err)
 	}
 	return result

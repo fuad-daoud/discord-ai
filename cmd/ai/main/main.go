@@ -24,5 +24,5 @@ func main() {
 	<-stop
 	defer platform.Close()
 	defer db.Close()
-	dlog.Info("Graceful shutdown")
+	dlog.Log.Info("Graceful shutdown")
 }

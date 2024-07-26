@@ -7,6 +7,7 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/rest"
+	"github.com/fuad-daoud/discord-ai/integrations/lava"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
 	"os"
@@ -15,7 +16,6 @@ import (
 var client *bot.Client
 
 func Setup() {
-
 	var err error
 	clientTmp, err := disgo.New(os.Getenv("TOKEN"),
 		bot.WithGatewayConfigOpts(
@@ -34,16 +34,16 @@ func Setup() {
 			cache.WithCaches(cache.FlagsAll),
 		),
 
-		//bot.WithEventListenerFunc(func(event *events.GenericEvent) {
-		//	dlog.Info("Triggered event", reflect.TypeOf(event))
-		//}),
-
 		bot.WithEventListenerFunc(dbReadyHandler),
 		bot.WithEventListenerFunc(dbThreadCreateHandler),
 		bot.WithEventListenerFunc(dbMessageCreateHandler),
 		bot.WithEventListenerFunc(dbMessageUpdateHandler),
 
 		bot.WithEventListenerFunc(botIsUpReadyHandler),
+		//bot.WithEventListenerFunc(lava.OnVoiceServerUpdate),
+		//bot.WithEventListenerFunc(lava.OnVoiceStateUpdate),
+		bot.WithEventListenerFunc(lava.OnReady),
+
 		bot.WithEventListenerFunc(func(e *events.GuildMessageCreate) {
 			go messageCreateHandler(e)
 		}),
@@ -65,7 +65,7 @@ type Handler struct {
 }
 
 func (h Handler) OnEvent(event bot.Event) {
-	dlog.Debug("update client")
+	dlog.Log.Debug("update client")
 	c := event.Client()
 	client = &c
 }
@@ -87,5 +87,5 @@ func Cache() cache.Caches {
 
 func Close() {
 	(*client).Close(context.TODO())
-	dlog.Info("disgo close successfully")
+	dlog.Log.Info("disgo close successfully")
 }

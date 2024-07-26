@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"github.com/disgoorg/snowflake/v2"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/platform"
 	"golang.org/x/net/context"
@@ -9,8 +8,7 @@ import (
 
 func leave(call *cohere.CommandCall) {
 	toolCall := call.ToolCall
-	guildId := snowflake.MustParse(call.ExtraProperties.GuildId)
-	_, botStateOk := platform.Cache().VoiceState(guildId, platform.Client().ApplicationID())
+	_, botStateOk := platform.Cache().VoiceState(call.ExtraProperties.GuildId, platform.Client().ApplicationID())
 	if !botStateOk {
 		cohere.Result <- &cohere.CommandResult{
 			Call: toolCall,
@@ -23,7 +21,7 @@ func leave(call *cohere.CommandCall) {
 		}
 		return
 	}
-	conn := platform.Client().VoiceManager().GetConn(guildId)
+	conn := platform.Client().VoiceManager().GetConn(call.ExtraProperties.GuildId)
 	conn.Close(context.Background())
 
 	cohere.Result <- &cohere.CommandResult{

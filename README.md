@@ -22,6 +22,8 @@
 
 </div>
 
+[![DigitalOcean Referral Badge](https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%201.svg)](https://www.digitalocean.com/?refcode=d055cd5977ae&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge)
+
 
 
 
@@ -79,3 +81,8 @@ export RESPEECHER_API_KEY="DgB1A7jQlUBPEbKjH490bg"
 
 [//]: # ([![Top Langs]&#40;https://digitallands-readme.vercel.app/api/top-langs/?username=fuad-daoud&layout=pie&#41;]&#40;https://github.com/fuad-daoud/github-readme-stats&#41;)
 
+
+
+banners from
+https://www.asciiart.eu/text-to-ascii-art
+https://go.dev/talks/2012/waza.slide#1
