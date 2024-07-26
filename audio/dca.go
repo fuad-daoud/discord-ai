@@ -118,7 +118,7 @@ func (d *DCA) write() {
 		panic(err)
 	}
 	fileName := newUUID.String() + ".opus"
-	filePath := "/home/fuad/test/" + fileName
+	filePath := "~/discord-ai/files" + fileName
 	create, err := os.Create(filePath)
 	if err != nil {
 		panic(err)
