@@ -135,12 +135,12 @@ func (p *DefaultPlayer) run(report func(err error)) {
 		case Pause:
 			{
 				dlog.Log.Info("Got Pause instruction")
+				p.inst = IDLE
 				return
 			}
 		case Stop:
 			{
 				dlog.Log.Info("Got Stop instruction")
-				element.packetIndex = 0
 				p.clear()
 				p.inst = IDLE
 				return

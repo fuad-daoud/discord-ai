@@ -57,9 +57,9 @@ jobs:
           key: ${{ inputs.key }}
       - uses: appleboy/scp-action@v0.1.7
         with:
-          host: 165.22.92.220
-          username: root
-          password: 1234Test
+          host: ${{ vars.server_ip }}
+          username: ${{ vars.user }}
+          password: ${{ vars.user_pass }}
           source: "${{ inputs.path }}/*"
           target: /root/${{ vars.SERVICE }}/${{ github.ref_name }}
           strip_components: ${{ inputs.strip_components }}
