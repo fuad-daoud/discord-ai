@@ -47,9 +47,9 @@ jobs:
       - name: executing remote ssh commands using password
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 165.22.92.220
-          username: root
-          password: 1234Test
+          host: ${{ vars.server_ip }}
+          username: ${{ vars.user }}
+          password: ${{ vars.user_pass }}
           script: |
             pm2 stop ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}
             rm -rf /root/${{ vars.SERVICE }}/${{ github.ref_name }}

@@ -87,6 +87,7 @@ jobs:
             --set env.COHERE_INST=${{ vars.COHERE_INST }} \
             --set env.ARCHIVE_CRON=${{ vars.ARCHIVE_CRON }} \
             --set env.PORT=${{ github.ref_type == 'tag' && vars.PORT || 8081 }} \
+            --set env.COHERE_API_KEY=${{ github.ref_type == 'tag' && vars.COHERE_API_KEY || 'xLPWbInVLTliZHK8JbYxYrtoEpu6K4Y8KFjJVJZ5' }} \
       - name: Moving
         id: moving
         run: |
