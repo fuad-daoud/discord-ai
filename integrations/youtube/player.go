@@ -135,7 +135,8 @@ func (p *DefaultPlayer) run(report func(err error)) {
 		case Pause:
 			{
 				dlog.Log.Info("Got Pause instruction")
-				break
+				p.inst = IDLE
+				return
 			}
 		case Stop:
 			{

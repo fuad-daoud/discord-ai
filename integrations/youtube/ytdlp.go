@@ -82,6 +82,7 @@ func (y *Ytdlp) download(report func(err error)) (io.Reader, error) {
 		"--progress",
 		"--output", "/tmp/audio/"+newUUID.String(),
 		//"--simulate",
+		"--no-warnings",
 		y.Data.Url,
 	)
 
