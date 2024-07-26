@@ -259,7 +259,7 @@ func botIsUpReadyHandler(event *events.Ready) {
 		content += ip.String() + " "
 	}
 	content += "]"
-	message, err := event.Client().Rest().CreateMessage(snowflake.MustParse("1252273230727876619"), discord.MessageCreate{
+	message, err := event.Client().Rest().CreateMessage(snowflake.MustParse("1266536257568116736"), discord.MessageCreate{
 		Content: content,
 	})
 	if err != nil {
