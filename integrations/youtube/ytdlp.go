@@ -23,11 +23,11 @@ type Ytdlp struct {
 	Data          Data
 }
 
-func (y *Ytdlp) GetAudio() (*[][]byte, error) {
+func (y *Ytdlp) GetAudio(report func(err error)) (*[][]byte, error) {
 	if !y.Data.filled {
 		return nil, errors.New("did not search for Data first")
 	}
-	result, err := y.videoPackets()
+	result, err := y.videoPackets(report)
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,8 @@ func (y *Ytdlp) GetAudio() (*[][]byte, error) {
 	return &segmants, nil
 }
 
-func (y *Ytdlp) videoPackets() (chan []byte, error) {
-	ytdlpAudio := y.download()
+func (y *Ytdlp) videoPackets(report func(err error)) (chan []byte, error) {
+	ytdlpAudio, _ := y.download(report)
 
 	ffmpeg, err := audio.FFMPEG(ytdlpAudio)
 	if err != nil {
@@ -60,11 +60,11 @@ func (y *Ytdlp) videoPackets() (chan []byte, error) {
 	return dca.Convert(ffmpeg), nil
 }
 
-func (y *Ytdlp) download() io.Reader {
+func (y *Ytdlp) download(report func(err error)) (io.Reader, error) {
 	start := time.Now()
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	cmd := exec.CommandContext(context.Background(), "/home/fuad/GolandProjects/discord-ai/artifacts/yt-dlp",
 		"--progress-template", "%(progress._percent_str)s",
@@ -89,16 +89,16 @@ func (y *Ytdlp) download() io.Reader {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	go func() {
@@ -117,7 +117,8 @@ func (y *Ytdlp) download() io.Reader {
 					}
 					percentage, err := strconv.ParseFloat(input, 64)
 					if err != nil {
-						panic(err)
+						report(err)
+						return
 					}
 					go y.Progress(percentage)
 				}
@@ -142,7 +143,7 @@ func (y *Ytdlp) download() io.Reader {
 	}()
 
 	if err := cmd.Wait(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	elapsed := time.Since(start)
@@ -150,13 +151,13 @@ func (y *Ytdlp) download() io.Reader {
 
 	open, err := os.Open("/tmp/audio/" + newUUID.String() + ".opus")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return open
+	return open, nil
 }
 
-func Search(query string) Data {
+func Search(query string) (Data, error) {
 	cmd := exec.CommandContext(context.Background(), "yt-dlp",
 		"ytsearch1:"+query,
 		"-j",
@@ -168,7 +169,7 @@ func Search(query string) Data {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		panic(err)
+		return Data{}, err
 	}
 	var data Data
 	err = json.Unmarshal(output, &data)
@@ -179,10 +180,10 @@ func Search(query string) Data {
 		//	return Search(query)
 		//}
 		dlog.Log.Error("got an er", "err", err)
-		panic(err)
+		return Data{}, err
 	}
 	data.filled = true
-	return data
+	return data, nil
 }
 
 func (y *Ytdlp) cache(filePath string) {

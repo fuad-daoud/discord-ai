@@ -11,6 +11,9 @@ import (
 	"github.com/fuad-daoud/discord-ai/integrations/youtube"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/fuad-daoud/discord-ai/platform"
+	"github.com/google/uuid"
+	"strings"
+	"time"
 )
 
 func play(call *cohere.CommandCall) {
@@ -18,20 +21,73 @@ func play(call *cohere.CommandCall) {
 	dlog.Log.Info("play call", "params", call.ToolCall.Parameters)
 	toolCall := call.ToolCall
 	information := call.ToolCall.Parameters["information"].(string)
-	data := youtube.Search(information)
-	packets := getPackets(call, data)
+	var err error
 
+	data, err := youtube.Search(information)
+	if err != nil {
+		newUUID, _ := uuid.NewUUID()
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	packets, err := getPackets(call, data)
+	if err != nil {
+		newUUID, _ := uuid.NewUUID()
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
 	conn, problem := getConn(call)
 	if problem {
 		return
 	}
 	var player youtube.Player
 
-	player = youtube.GetPlayer(call.ExtraProperties.GuildId)
+	player, err = youtube.GetPlayer(call.ExtraProperties.GuildId)
+	if err != nil {
+		newUUID, _ := uuid.NewUUID()
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
 
 	player.SetConn(conn)
-	player.Add(data, packets)
-	player.Run()
+	err = player.Add(data, packets)
+	if err != nil {
+		newUUID, _ := uuid.NewUUID()
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	player.Run(report(call))
 
 	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties)
 
@@ -46,7 +102,7 @@ func play(call *cohere.CommandCall) {
 	}
 }
 
-func getPackets(call *cohere.CommandCall, data youtube.Data) *[][]byte {
+func getPackets(call *cohere.CommandCall, data youtube.Data) (*[][]byte, error) {
 	var packets *[][]byte
 	dlog.Log.Info("Checking cache")
 	download := digitalocean.Download("youtube/cache/" + data.Id + ".opus")
@@ -59,7 +115,7 @@ func getPackets(call *cohere.CommandCall, data youtube.Data) *[][]byte {
 			Content: "Downloading ...",
 		})
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		y := youtube.Ytdlp{
 			Progress:      progress(call, message),
@@ -67,12 +123,12 @@ func getPackets(call *cohere.CommandCall, data youtube.Data) *[][]byte {
 			Data:          data,
 		}
 
-		packets, err = y.GetAudio()
+		packets, err = y.GetAudio(report(call))
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
-	return packets
+	return packets, nil
 }
 
 func progress(call *cohere.CommandCall, message *discord.Message) func(percentage float64) {
@@ -88,8 +144,10 @@ func progress(call *cohere.CommandCall, message *discord.Message) func(percentag
 }
 
 func progressError() func(input string) {
+	builder := strings.Builder{}
 	return func(input string) {
-		dlog.Log.Error("something wrong happened", "input", input)
+		builder.WriteString(input)
+		dlog.Log.Error("something wrong happened", "input", builder.String())
 	}
 }
 
@@ -176,7 +234,22 @@ func getConn(call *cohere.CommandCall) (voice.Conn, bool) {
 }
 
 func pause(call *cohere.CommandCall) {
-	youtube.GetPlayer(call.ExtraProperties.GuildId).Pause()
+	player, err := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	newUUID, _ := uuid.NewUUID()
+	if err != nil {
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+
+	player.Pause()
 	cohere.Result <- &cohere.CommandResult{
 		Call: call.ToolCall,
 		Outputs: []map[string]interface{}{
@@ -188,7 +261,22 @@ func pause(call *cohere.CommandCall) {
 	}
 }
 func stop(call *cohere.CommandCall) {
-	youtube.GetPlayer(call.ExtraProperties.GuildId).Stop()
+	player, err := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	newUUID, _ := uuid.NewUUID()
+	if err != nil {
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	player.Stop()
+
 	cohere.Result <- &cohere.CommandResult{
 		Call: call.ToolCall,
 		Outputs: []map[string]interface{}{
@@ -200,7 +288,21 @@ func stop(call *cohere.CommandCall) {
 	}
 }
 func resume(call *cohere.CommandCall) {
-	youtube.GetPlayer(call.ExtraProperties.GuildId).Resume()
+	player, err := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	newUUID, _ := uuid.NewUUID()
+	if err != nil {
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	player.Resume()
 	cohere.Result <- &cohere.CommandResult{
 		Call: call.ToolCall,
 		Outputs: []map[string]interface{}{
@@ -212,7 +314,33 @@ func resume(call *cohere.CommandCall) {
 	}
 }
 func skip(call *cohere.CommandCall) {
-	youtube.GetPlayer(call.ExtraProperties.GuildId).Skip()
+	player, err := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	newUUID, _ := uuid.NewUUID()
+	if err != nil {
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	err = player.Skip()
+	if err != nil {
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
 	cohere.Result <- &cohere.CommandResult{
 		Call: call.ToolCall,
 		Outputs: []map[string]interface{}{
@@ -224,7 +352,7 @@ func skip(call *cohere.CommandCall) {
 	}
 }
 func queue(call *cohere.CommandCall) {
-	player := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	player, _ := youtube.GetPlayer(call.ExtraProperties.GuildId)
 	q := youtube.GetQueue(player.GetDBPlayer())
 	result := make([]map[string]interface{}, 0)
 	for _, element := range q {
@@ -245,20 +373,39 @@ func queue(call *cohere.CommandCall) {
 	}
 }
 func search(call *cohere.CommandCall) {
-	data := youtube.Search(call.Parameters["information"].(string))
+	data, err := youtube.Search(call.Parameters["information"].(string))
+	newUUID, _ := uuid.NewUUID()
+	if err != nil {
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
 	cohere.Result <- &cohere.CommandResult{
 		Call: call.ToolCall,
 		Outputs: []map[string]interface{}{
 			{
 				"Success": true,
-				//"Title":   data.FullTitle,
-				//"Video Description": data.Description,
-				//"Duration": data.DurationString,
-				//"Channel":  data.Channel,
-				"url": data.Url,
-				//"Likes":    data.LikeCount,
-				//"Views":    data.ViewCount,
+				"url":     data.Url,
 			},
 		},
+	}
+}
+
+func report(call *cohere.CommandCall) func(err error) {
+	return func(err error) {
+		newUUID, _ := uuid.NewUUID()
+		now := time.Now()
+		sprintf := fmt.Sprintf("reporting problem details, uuid: %s, time: %v", newUUID.String(), now)
+		dlog.Log.Error("reporting problem", "err", err, "uuid", newUUID.String(), "time", now)
+		_, _ = platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
+			Content: sprintf,
+		})
 	}
 }

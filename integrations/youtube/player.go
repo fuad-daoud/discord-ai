@@ -1,9 +1,8 @@
 package youtube
 
 import (
+	"errors"
 	"github.com/disgoorg/disgo/voice"
-	"github.com/fuad-daoud/discord-ai/audio"
-	"github.com/fuad-daoud/discord-ai/integrations/digitalocean"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/google/uuid"
 	"math"
@@ -11,15 +10,15 @@ import (
 )
 
 type Player interface {
-	Run()
+	Run(func(err error))
 	Stop()
 	Pause()
 	Resume()
 	Seek(time time.Duration)
 	SetConn(conn voice.Conn)
-	Add(data Data, packets *[][]byte)
+	Add(data Data, packets *[][]byte) error
 	Save()
-	Skip()
+	Skip() error
 	GetDBPlayer() DBPlayer
 }
 
@@ -28,7 +27,6 @@ type DefaultPlayer struct {
 	queue   Queue
 	inst    InstructionType
 	conn    voice.Conn
-	Playing bool
 	GuildId string
 }
 
@@ -59,10 +57,10 @@ const (
 	Seek    InstructionType = iota
 )
 
-func (p *DefaultPlayer) Add(data Data, packets *[][]byte) {
+func (p *DefaultPlayer) Add(data Data, packets *[][]byte) error {
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
-		panic(err)
+		return errors.New(err.Error())
 	}
 	element := DBQueueElement{
 		Index:          len(p.queue),
@@ -86,20 +84,19 @@ func (p *DefaultPlayer) Add(data Data, packets *[][]byte) {
 		DBQueueElement: element,
 		Packets:        packets,
 	})
-
+	return nil
 }
 
-func (p *DefaultPlayer) Run() {
+func (p *DefaultPlayer) Run(report func(err error)) {
 	if p.inst != IDLE {
 		return
 	}
-	go p.run()
+	go p.run(report)
 }
 
-func (p *DefaultPlayer) run() {
+func (p *DefaultPlayer) run(report func(err error)) {
 	dlog.Log.Info("Running player loop")
 
-	p.Playing = true
 	p.inst = Resume
 	element := p.queue.Head()
 
@@ -112,18 +109,25 @@ func (p *DefaultPlayer) run() {
 		switch p.inst {
 		case nextSeg, Resume:
 			{
-				p.Playing = true
 
 				index := element.packetIndex
 				if len(seg) != 0 && index >= len(seg) {
 					dlog.Log.Info("finished packets")
-					p.queue.Pop()
+					_, err := p.queue.Pop()
+					if err != nil {
+						report(err)
+						return
+					}
 					if len(p.queue) > 0 {
-						go p.run()
+						go p.run(nil)
 					}
 					return
 				}
-				p.writeCurrentSeg(seg[index])
+				err := p.writeCurrentSeg(seg[index])
+				if err != nil {
+					report(err)
+					return
+				}
 				time.Sleep(20 * time.Millisecond)
 				element.packetIndex++
 				break
@@ -131,14 +135,12 @@ func (p *DefaultPlayer) run() {
 		case Pause:
 			{
 				dlog.Log.Info("Got Pause instruction")
-				p.Playing = false
 				return
 			}
 		case Stop:
 			{
 				dlog.Log.Info("Got Stop instruction")
 				element.packetIndex = 0
-				p.Playing = false
 				p.clear()
 				p.inst = IDLE
 				return
@@ -148,20 +150,21 @@ func (p *DefaultPlayer) run() {
 		}
 	}
 }
-func (p *DefaultPlayer) writeCurrentSeg(seg []byte) {
+func (p *DefaultPlayer) writeCurrentSeg(seg []byte) error {
 	_, err := p.conn.UDP().Write(seg)
 
 	if err != nil {
 		dlog.Log.Error("Failed to send talk segment", "error", err)
-		panic(err)
+		return errors.New("failed to send talk segment")
 	}
+	return nil
 }
 func (p *DefaultPlayer) Pause() {
 	p.inst = Pause
 }
 func (p *DefaultPlayer) Resume() {
 	p.inst = Resume
-	p.Run()
+	p.Run(nil)
 }
 func (p *DefaultPlayer) Seek(time time.Duration) {
 	dlog.Log.Info("seeking to ", "duration", time)
@@ -177,89 +180,12 @@ func (p *DefaultPlayer) clear() {
 	p.queue = make(Queue, 0)
 }
 
-func (p *DefaultPlayer) Skip() {
+func (p *DefaultPlayer) Skip() error {
 	if len(p.queue) <= 0 {
 		dlog.Log.Error("Skipping empty queue")
-		return
+		return errors.New("skipping empty queue")
 	}
 	element := p.queue.Head()
 	element.packetIndex = math.MaxInt - 1_000
-}
-
-type QueueElement struct {
-	DBQueueElement
-	Packets         *[][]byte
-	packetIndex     int
-	FinishedLoading *bool
-}
-
-type Queue []*QueueElement
-
-func (element *QueueElement) Load() {
-	if element.Packets == nil {
-		download := digitalocean.Download("youtube/cache/" + element.Id + ".opus")
-		if download != nil {
-			element.Packets = audio.ReadDCA(download.Body)
-		} else {
-			y := Ytdlp{
-				Progress: func(percentage float64) {
-					dlog.Log.Info("downloading", "percentage", percentage)
-				},
-				ProgressError: func(input string) {
-					dlog.Log.Error("download error", "input", input)
-				},
-				Data: Data{
-					Id:             element.Id,
-					FullTitle:      element.FullTitle,
-					Tags:           element.Tags,
-					Categories:     element.Categories,
-					ViewCount:      element.ViewCount,
-					Thumbnail:      element.Thumbnail,
-					Description:    element.Description,
-					DurationString: element.DurationString,
-					LikeCount:      element.LikeCount,
-					Channel:        element.Channel,
-					UploaderId:     element.UploaderId,
-					Url:            element.Url,
-					filled:         true,
-				},
-			}
-			var err error
-			element.Packets, err = y.GetAudio()
-			if err != nil {
-				panic(err)
-			}
-		}
-
-	}
-}
-
-func (q *Queue) Head() *QueueElement {
-	return (*q)[0]
-}
-
-func (q *Queue) Pop() QueueElement {
-	if len(*q) == 0 {
-		dlog.Log.Error("popping on empty queue")
-		panic("popping on empty queue")
-	}
-	element := (*q)[0]
-	element.Delete()
-	*q = (*q)[1:]
-	return *element
-}
-
-func (q *Queue) add(element *QueueElement) {
-	*q = append(*q, element)
-}
-
-func (q *Queue) clear() {
-	for _, element := range *q {
-		element.GoDelete()
-	}
-}
-func (q *Queue) Load() {
-	for index := range *q {
-		(*q)[index].Load()
-	}
+	return nil
 }

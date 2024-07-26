@@ -6,7 +6,7 @@ var (
 	players = make(map[snowflake.ID]Player)
 )
 
-func GetPlayer(guildId snowflake.ID) Player {
+func GetPlayer(guildId snowflake.ID) (Player, error) {
 	player, ok := players[guildId]
 	if !ok {
 		dbPlayer := DBPlayer{Id: guildId.String()}
@@ -19,7 +19,10 @@ func GetPlayer(guildId snowflake.ID) Player {
 		}
 		players[guildId] = player
 		player.Save()
-		queue.Load()
+		err := queue.Load()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return player
+	return player, nil
 }
