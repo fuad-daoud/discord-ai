@@ -103,5 +103,5 @@ func Close() {
 	if err != nil {
 		panic(err)
 	}
-	dlog.Log.Info("DB Connection closed.")
+	dlog.Log.Info("db Connection closed.")
 }

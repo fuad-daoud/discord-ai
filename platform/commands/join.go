@@ -17,7 +17,9 @@ const (
 	Pause  Command = "command_pause"
 	Stop   Command = "command_stop"
 	Resume Command = "command_resume"
+	Skip   Command = "command_skip"
 	Search Command = "command_search"
+	Queue  Command = "command_queue"
 )
 
 func AddCommandsChannelOnReadyHandler() {
@@ -50,6 +52,12 @@ func AddCommandsChannelOnReadyHandler() {
 				break
 			case Resume:
 				go resume(call)
+				break
+			case Skip:
+				go skip(call)
+				break
+			case Queue:
+				go queue(call)
 				break
 			case Search:
 				go search(call)

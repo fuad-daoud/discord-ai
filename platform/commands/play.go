@@ -17,19 +17,44 @@ func play(call *cohere.CommandCall) {
 	dlog.Log.Info("starting play function")
 	dlog.Log.Info("play call", "params", call.ToolCall.Parameters)
 	toolCall := call.ToolCall
-
 	information := call.ToolCall.Parameters["information"].(string)
 	data := youtube.Search(information)
+	packets := getPackets(call, data)
 
+	conn, problem := getConn(call)
+	if problem {
+		return
+	}
+	var player youtube.Player
+
+	player = youtube.GetPlayer(call.ExtraProperties.GuildId)
+
+	player.SetConn(conn)
+	player.Add(data, packets)
+	player.Run()
+
+	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties)
+
+	cohere.Result <- &cohere.CommandResult{
+		Call: toolCall,
+		Outputs: []map[string]interface{}{
+			{
+				"Success":     true,
+				"Description": "song playing successfully",
+			},
+		},
+	}
+}
+
+func getPackets(call *cohere.CommandCall, data youtube.Data) *[][]byte {
 	var packets *[][]byte
+	dlog.Log.Info("Checking cache")
 	download := digitalocean.Download("youtube/cache/" + data.Id + ".opus")
 	if download != nil {
-		var err error
-		packets, err = audio.ReadDCA(download.Body)
-		if err != nil {
-			panic(err)
-		}
+		dlog.Log.Info("cache found")
+		packets = audio.ReadDCA(download.Body)
 	} else {
+		dlog.Log.Info("no cache ..")
 		message, err := platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
 			Content: "Downloading ...",
 		})
@@ -47,30 +72,7 @@ func play(call *cohere.CommandCall) {
 			panic(err)
 		}
 	}
-
-	conn, problem := getConn(call)
-	if problem {
-		return
-	}
-	player := youtube.DefaultPlayer{
-		Segments: packets,
-		Conn:     conn,
-		Playing:  false,
-	}
-	youtube.AddPlayer(&player, call.ExtraProperties.GuildId)
-	player.Run()
-
-	go platform.HandleDeepgramVoicePackets(conn, call.ExtraProperties)
-
-	cohere.Result <- &cohere.CommandResult{
-		Call: toolCall,
-		Outputs: []map[string]interface{}{
-			{
-				"Success":     true,
-				"Description": "song playing successfully",
-			},
-		},
-	}
+	return packets
 }
 
 func progress(call *cohere.CommandCall, message *discord.Message) func(percentage float64) {
@@ -209,7 +211,39 @@ func resume(call *cohere.CommandCall) {
 		},
 	}
 }
-
+func skip(call *cohere.CommandCall) {
+	youtube.GetPlayer(call.ExtraProperties.GuildId).Skip()
+	cohere.Result <- &cohere.CommandResult{
+		Call: call.ToolCall,
+		Outputs: []map[string]interface{}{
+			{
+				"Success":     true,
+				"Description": "skipped successfully",
+			},
+		},
+	}
+}
+func queue(call *cohere.CommandCall) {
+	player := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	q := youtube.GetQueue(player.GetDBPlayer())
+	result := make([]map[string]interface{}, 0)
+	for _, element := range q {
+		result = append(result, map[string]interface{}{
+			"FullTitle":      element.FullTitle,
+			"DurationString": element.DurationString,
+			"Url":            element.Url,
+		})
+	}
+	cohere.Result <- &cohere.CommandResult{
+		Call: call.ToolCall,
+		Outputs: []map[string]interface{}{
+			{
+				"Success": true,
+				"Queue":   result,
+			},
+		},
+	}
+}
 func search(call *cohere.CommandCall) {
 	data := youtube.Search(call.Parameters["information"].(string))
 	cohere.Result <- &cohere.CommandResult{

@@ -16,6 +16,7 @@ func MatchN(key string, val any) string {
 func Match(stmt string) string {
 	return "MATCH " + stmt
 }
+
 func Merge(stmt string) string {
 	return "MERGE " + stmt
 }
@@ -34,6 +35,10 @@ func Set(key string, val any) string {
 
 func Return(keys ...string) string {
 	return "RETURN " + strings.Join(keys, ",")
+
+}
+func Delete(keys ...string) string {
+	return "DELETE " + strings.Join(keys, ",")
 
 }
 
@@ -75,11 +80,31 @@ func ToProperties(val any) string {
 				continue
 			}
 			stringBuilder.WriteString(fmt.Sprintf(`%s: "%v",`, key, value))
+			break
+		case []interface{}:
+			stringBuilder.WriteString(fmt.Sprintf(`%s: `, key))
+			stringBuilder.WriteString("[")
+			elements := value.([]interface{})
+			if len(elements) != 0 {
+				stringBuilder.WriteString(fmt.Sprintf(`"%v"`, elements[0]))
+			}
+			for i, element := range elements {
+				if i == 0 {
+					continue
+				}
+				stringBuilder.WriteString(", ")
+				stringBuilder.WriteString(fmt.Sprintf(`"%v"`, element))
+			}
+			stringBuilder.WriteString("],")
+			break
 		default:
 			stringBuilder.WriteString(fmt.Sprintf(`%s: %v,`, key, value))
 		}
 	}
 	cypherProperties := stringBuilder.String()
+	if len(cypherProperties) == 1 {
+		return ""
+	}
 	cypherProperties = cypherProperties[:len(cypherProperties)-1]
 	cypherProperties = cypherProperties + "}"
 	return cypherProperties

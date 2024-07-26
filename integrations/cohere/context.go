@@ -90,6 +90,16 @@ var (
 			Description:          "resume the current playing song",
 			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
 		},
+		{
+			Name:                 "command_skip",
+			Description:          "skip the current playing song",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_queue",
+			Description:          "list songs in queue, list them in each on separate line",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
 	}
 )
 

@@ -17,9 +17,6 @@ func TestYoutubeProgress(t *testing.T) {
 		panic(err)
 	}
 	youtube := Ytdlp{
-		Process: func(seg []byte) {
-
-		},
 		Progress: func(percentage float64) {
 			dlog.Log.Info("Progress", "percentage", percentage)
 		},
@@ -27,7 +24,8 @@ func TestYoutubeProgress(t *testing.T) {
 			dlog.Log.Error("Something wrong happened", "err", input)
 		},
 	}
-	youtube.download(id)
+	youtube.Data = Search("LriHRa9t1fQ")
+	youtube.download()
 	//t.Errorf("got %q, wanted %q", got, want)
 }
 

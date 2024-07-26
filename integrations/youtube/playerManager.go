@@ -6,10 +6,20 @@ var (
 	players = make(map[snowflake.ID]Player)
 )
 
-func AddPlayer(player Player, guildId snowflake.ID) {
-	players[guildId] = player
-}
-
 func GetPlayer(guildId snowflake.ID) Player {
-	return players[guildId]
+	player, ok := players[guildId]
+	if !ok {
+		dbPlayer := DBPlayer{Id: guildId.String()}
+		queue := GetQueue(dbPlayer)
+		player = &DefaultPlayer{
+			DBPlayer: dbPlayer,
+			queue:    queue,
+			GuildId:  guildId.String(),
+			inst:     IDLE,
+		}
+		players[guildId] = player
+		player.Save()
+		queue.Load()
+	}
+	return player
 }

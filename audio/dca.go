@@ -21,7 +21,7 @@ const (
 	maxBytes       = (audioFrameSize * audioChannels) * 2 // max size of opus data
 )
 
-func ReadDCA(in io.ReadCloser) (*[][]byte, error) {
+func ReadDCA(in io.ReadCloser) *[][]byte {
 	packets := make([][]byte, 0)
 	go func() {
 		var opuslen int16
@@ -51,7 +51,7 @@ func ReadDCA(in io.ReadCloser) (*[][]byte, error) {
 			packets = append(packets, InBuf)
 		}
 	}()
-	return &packets, nil
+	return &packets
 }
 
 type DCA struct {

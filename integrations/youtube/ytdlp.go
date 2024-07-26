@@ -163,6 +163,7 @@ func Search(query string) Data {
 		"--concurrent-fragments", "16",
 		"--audio-format", "opus",
 		"--quiet",
+		"--no-warnings",
 	)
 
 	output, err := cmd.CombinedOutput()
@@ -172,6 +173,12 @@ func Search(query string) Data {
 	var data Data
 	err = json.Unmarshal(output, &data)
 	if err != nil {
+		//dlog.Log.Warn("could not parse json trying to fetch a new one ...")
+		//if _, ok := err.(json.SyntaxError); ok {
+		//	time.Sleep(1 * time.Second)
+		//	return Search(query)
+		//}
+		dlog.Log.Error("got an er", "err", err)
 		panic(err)
 	}
 	data.filled = true
