@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"io"
 	"layeh.com/gopus"
-	"log"
 	"os"
 )
 
@@ -31,13 +30,14 @@ func ReadDCA(in io.ReadCloser) *[][]byte {
 			if err == io.EOF || errors.Is(err, io.ErrUnexpectedEOF) {
 				err := in.Close()
 				if err != nil {
-					panic(err)
+					dlog.Log.Error("Error closing dca file", "err", err)
+					return
 				}
 				return
 			}
 			if err != nil {
 				dlog.Log.Error("Error reading from dca file", "err", err)
-				panic(err)
+				return
 			}
 
 			InBuf := make([]byte, opuslen)
@@ -45,7 +45,7 @@ func ReadDCA(in io.ReadCloser) *[][]byte {
 
 			if err != nil {
 				dlog.Log.Error("Error reading from dca file", "err", err)
-				panic(err)
+				return
 			}
 
 			packets = append(packets, InBuf)
@@ -72,8 +72,8 @@ func (d *DCA) Convert(in io.Reader) chan []byte {
 func (d *DCA) process(in io.Reader) {
 	OpusEncoder, err := gopus.NewEncoder(audioFrameRate, audioChannels, gopus.Audio)
 	if err != nil {
-		fmt.Println("NewEncoder Error:", err)
-		panic(err)
+		dlog.Log.Error("Error creating opus encoder", "err", err)
+		return
 	}
 
 	OpusEncoder.SetBitrate(audioBitrate * 1000)
@@ -94,6 +94,7 @@ func (d *DCA) process(in io.Reader) {
 		if errors.Is(err, io.ErrUnexpectedEOF) {
 			opus, err := encode(OpusEncoder, buf)
 			if err != nil {
+				dlog.Log.Error("Error encoding opus", "err", err)
 				return
 			}
 			d.resultChan <- opus
@@ -101,11 +102,12 @@ func (d *DCA) process(in io.Reader) {
 			return
 		}
 		if err != nil {
-			log.Println("error reading from stdin,", err)
+			dlog.Log.Error("Error reading opus", "err", err)
 			return
 		}
 		opus, err := encode(OpusEncoder, buf)
 		if err != nil {
+			dlog.Log.Error("Failed to encode opus", "err", err)
 			return
 		}
 		d.resultChan <- opus
@@ -115,30 +117,33 @@ func (d *DCA) process(in io.Reader) {
 func (d *DCA) write() {
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("Error generating UUID", "err", err)
+		return
 	}
 	fileName := newUUID.String() + ".opus"
 	dirs := "./files/"
 	err = os.MkdirAll(dirs, 0777)
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("Error creating directory", "err", err)
+		return
 	}
 	filePath := dirs + fileName
 	create, err := os.Create(filePath)
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("Error creating file", "err", err)
+		return
 	}
 	buffer := bufio.NewWriter(create)
 	defer func() {
 		err := buffer.Flush()
 		if err != nil {
 			dlog.Log.Error("error flushing stdout", "err", err)
-			panic(err)
+			return
 		}
 		err = create.Close()
 		if err != nil {
 			dlog.Log.Error("error flushing stdout", "err", err)
-			panic(err)
+			return
 		}
 		d.Cache(filePath)
 	}()

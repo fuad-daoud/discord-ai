@@ -185,8 +185,8 @@ func join(call *cohere.CommandCall) {
 
 	//audioProvider, err := elevenlabs.TTS("I am here !!")
 	//if err != nil {
-	//panic(err)
-	//return
+	//	dlog.Log.Error("could not get audio provider", "error", err)
+	//	return
 	//}
 
 	//conn.SetOpusFrameProvider(provider)

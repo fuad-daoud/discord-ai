@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fuad-daoud/discord-ai/db"
 	"github.com/fuad-daoud/discord-ai/db/cypher"
+	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"sort"
 )
 
@@ -26,35 +27,60 @@ type DBQueueElement struct {
 	LikeCount      int      `json:"like_count"`
 	Channel        string   `json:"channel"`
 	UploaderId     string   `json:"uploader_id"`
-	Url            string   `json:"original_url"`
+	OriginalUrl    string   `json:"original_url"`
 	UUID           string   `json:"UUID"`
 	filled         bool
 }
 
 func (p DBPlayer) Save(guildId string) {
 	g := db.Guild{Id: guildId}
-	db.InTransaction(func(write db.Write) {
-		write(cypher.MatchN("g", g), cypher.MergeN("p", p), cypher.Merge("(g)-[:HAS]->(p)"))
+	err := db.InTransaction(func(write db.Write) error {
+		_, err := write(cypher.MatchN("g", g), cypher.MergeN("p", p), cypher.Merge("(g)-[:HAS]->(p)"))
+		if err != nil {
+			return err
+		}
+		return nil
 	})
+	if err != nil {
+		dlog.Log.Error("Failed to insert player in DB", guildId, err)
+	}
 }
 
 func (p DBPlayer) addQueueElement(q DBQueueElement) {
-	db.InTransaction(func(write db.Write) {
-		write(cypher.MatchN("p", p), cypher.CreateN("q", q), cypher.Create("(p)-[:QUEUE]->(q)"))
+	err := db.InTransaction(func(write db.Write) error {
+		_, err := write(cypher.MatchN("p", p), cypher.CreateN("q", q), cypher.Create("(p)-[:QUEUE]->(q)"))
+		if err != nil {
+			return err
+		}
+		return nil
 	})
+	if err != nil {
+		dlog.Log.Error("error adding queue element: ", err)
+	}
 }
 
 func (q DBQueueElement) Delete() {
-	db.InTransaction(func(write db.Write) {
-		write(cypher.Match(fmt.Sprintf("(q:DBQueueElement {UUID: \"%s\"})", q.UUID)), "DETACH", cypher.Delete("q"))
+	err := db.InTransaction(func(write db.Write) error {
+		_, err := write(cypher.Match(fmt.Sprintf("(q:DBQueueElement {UUID: \"%s\"})", q.UUID)), "DETACH", cypher.Delete("q"))
+		if err != nil {
+			return err
+		}
+		return nil
 	})
+	if err != nil {
+		dlog.Log.Error("error deleting queue element: ", err)
+	}
 }
 func (q DBQueueElement) GoDelete() {
 	go q.Delete()
 }
 
 func GetQueue(p DBPlayer) Queue {
-	result := db.Query(cypher.MatchN("p", p), "-[:QUEUE]->", "(q)", cypher.Return("q"))
+	result, err := db.Query(cypher.MatchN("p", p), "-[:QUEUE]->", "(q)", cypher.Return("q"))
+	if err != nil {
+		dlog.Log.Error("error getting queue element: ", err)
+		panic("error getting queue element")
+	}
 	all, ok := cypher.ParseAll[DBQueueElement]("q", result)
 	if !ok {
 		return Queue{}
@@ -69,6 +95,5 @@ func GetQueue(p DBPlayer) Queue {
 		}
 		q[index] = &queueElement
 	}
-
 	return q
 }

@@ -14,7 +14,7 @@ func TestYoutubeProgress(t *testing.T) {
 
 	err := os.RemoveAll("/tmp/audio/" + id + ".opus")
 	if err != nil {
-		panic(err)
+		os.Exit(1)
 	}
 	youtube := Ytdlp{
 		Progress: func(percentage float64) {

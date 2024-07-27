@@ -11,16 +11,14 @@ import (
 	"os"
 )
 
-func clientChatStream(ctx context.Context, request *cohere.ChatStreamRequest) *core.Stream[cohere.StreamedChatResponse] {
-	//co := client.NewClient(client.WithToken("xLPWbInVLTliZHK8JbYxYrtoEpu6K4Y8KFjJVJZ5"))
-	//co := client.NewClient(client.WithToken("6ZdYunaql4JpAxOjvr6IaKiOka3Rco10ppsKWs2C"))
+func clientChatStream(ctx context.Context, request *cohere.ChatStreamRequest) (*core.Stream[cohere.StreamedChatResponse], error) {
 	co := client.NewClient(client.WithToken(os.Getenv("COHERE_API_KEY")))
 	chatStream, err := co.ChatStream(ctx, request)
 	if err != nil {
 		dlog.Log.Error(err.Error())
-		panic(err)
+		return nil, err
 	}
-	return chatStream
+	return chatStream, nil
 }
 
 func StreamChat(message, conversationId string, prop Properties) chan StreamResult {
@@ -44,7 +42,11 @@ func StreamChat(message, conversationId string, prop Properties) chan StreamResu
 }
 
 func stream(context *StreamContext) {
-	chatStream := clientChatStream(context.ctx, context.request)
+	chatStream, err := clientChatStream(context.ctx, context.request)
+	if err != nil {
+		dlog.Log.Error(err.Error())
+		return
+	}
 	for {
 		response, err := chatStream.Recv()
 		if err != nil && !errors.Is(err, io.EOF) {
@@ -75,7 +77,11 @@ func handleStreamEvent(context *StreamContext) {
 				dlog.Log.Info("got result", "result", context.request.ToolResults[index])
 			}
 			context.request.Message = ""
-			chatStream := clientChatStream(context.ctx, context.request)
+			chatStream, err := clientChatStream(context.ctx, context.request)
+			if err != nil {
+				dlog.Log.Error(err.Error())
+				return
+			}
 			for {
 				response, err := chatStream.Recv()
 				if err != nil && !errors.Is(err, io.EOF) {

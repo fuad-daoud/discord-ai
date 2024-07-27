@@ -28,10 +28,12 @@ func init() {
 func setup() {
 	err := os.MkdirAll("logs", os.ModePerm)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
 	err = os.MkdirAll("logs/buffered", os.ModePerm)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
 
@@ -46,6 +48,7 @@ func createLogger() *slog.Logger {
 
 	err := os.MkdirAll("logs/buffered", os.ModePerm)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
 
@@ -60,10 +63,12 @@ func createLogger() *slog.Logger {
 func getJsonHandler(archiver *Archiver, opts *slog.HandlerOptions) slog.Handler {
 	fileJson, err := os.OpenFile("logs/default.json", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
 	jsonBufferFile, err := os.OpenFile("logs/buffered/default.json", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
 	return slog.NewJSONHandler(&BufferedFile{

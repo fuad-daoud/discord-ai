@@ -15,6 +15,7 @@ func Setup() {
 	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		dlog.Log.Error("Could not serve on " + port)
+		// normal panic
 		panic(err)
 	}
 }

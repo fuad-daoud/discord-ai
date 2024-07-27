@@ -105,8 +105,8 @@ func play(call *cohere.CommandCall) {
 func getPackets(call *cohere.CommandCall, data youtube.Data) (*[][]byte, error) {
 	var packets *[][]byte
 	dlog.Log.Info("Checking cache")
-	download := digitalocean.Download("youtube/cache/" + data.Id + ".opus")
-	if download != nil {
+	download, err := digitalocean.Download("youtube/cache/" + data.Id + ".opus")
+	if err == nil && download != nil {
 		dlog.Log.Info("cache found")
 		packets = audio.ReadDCA(download.Body)
 	} else {
@@ -138,7 +138,8 @@ func progress(call *cohere.CommandCall, message *discord.Message, title string) 
 			Content: cohere.String(fmt.Sprintf("Downloading %s: %v%%", title, percentage)),
 		})
 		if err != nil {
-			panic(err)
+			dlog.Log.Error("can't log progress", "percentage", percentage, "error", err)
+			return
 		}
 	}
 }
@@ -363,7 +364,7 @@ func queue(call *cohere.CommandCall) {
 		result = append(result, map[string]interface{}{
 			"FullTitle":      element.FullTitle,
 			"DurationString": element.DurationString,
-			"Url":            element.Url,
+			"OriginalUrl":    element.OriginalUrl,
 		})
 	}
 	cohere.Result <- &cohere.CommandResult{

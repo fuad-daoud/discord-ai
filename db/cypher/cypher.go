@@ -2,6 +2,7 @@ package cypher
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/mitchellh/mapstructure"
@@ -29,8 +30,12 @@ func Create(stmt string) string {
 func CreateN(key string, val any) string {
 	return "CREATE " + Cypher(key, val)
 }
-func Set(key string, val any) string {
-	return "SET " + key + "=" + ToProperties(val)
+func Set(key string, val any) (string, error) {
+	properties, err := ToProperties(val)
+	if err != nil {
+		return "", err
+	}
+	return "SET " + key + "=" + properties, nil
 }
 
 func Return(keys ...string) string {
@@ -43,7 +48,12 @@ func Delete(keys ...string) string {
 }
 
 func Cypher(key string, val any) string {
-	cypherProperties := ToProperties(val)
+	cypherProperties, err := ToProperties(val)
+
+	if err != nil {
+		dlog.Log.Error("Cypher: "+err.Error(), "err", err)
+		return ""
+	}
 
 	labels := strings.Builder{}
 	ifv := reflect.ValueOf(val)
@@ -63,12 +73,16 @@ func Cypher(key string, val any) string {
 	return fmt.Sprintf("(%s%s %s)", key, labels.String(), cypherProperties)
 }
 
-func ToProperties(val any) string {
+func ToProperties(val any) (string, error) {
 	if val == nil {
-		panic("Val in ToProperties can't be nil")
+		dlog.Log.Error("Val in ToProperties can't be nil")
+		return "", errors.New("val in ToProperties can't be nil")
 	}
 
-	m := toMap(val)
+	m, err := toMap(val)
+	if err != nil {
+		return "", err
+	}
 
 	stringBuilder := strings.Builder{}
 	stringBuilder.WriteString("{")
@@ -79,6 +93,7 @@ func ToProperties(val any) string {
 			if value == "" {
 				continue
 			}
+			value = strings.Replace(value.(string), "\"", "\\\"", -1)
 			stringBuilder.WriteString(fmt.Sprintf(`%s: "%v",`, key, value))
 			break
 		case []interface{}:
@@ -103,21 +118,22 @@ func ToProperties(val any) string {
 	}
 	cypherProperties := stringBuilder.String()
 	if len(cypherProperties) == 1 {
-		return ""
+		return "", nil
 	}
 	cypherProperties = cypherProperties[:len(cypherProperties)-1]
 	cypherProperties = cypherProperties + "}"
-	return cypherProperties
+	return cypherProperties, nil
 }
 
-func toMap(in any) map[string]interface{} {
+func toMap(in any) (map[string]interface{}, error) {
 	inrec, _ := json.Marshal(in)
 	var mp map[string]interface{}
 	err := json.Unmarshal(inrec, &mp)
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("failed to convert to map", "in", in, "err", err)
+		return nil, err
 	}
-	return mp
+	return mp, nil
 }
 
 func ParseAll[KeyValue any](key string, eagerResult *neo4j.EagerResult) ([]KeyValue, bool) {
@@ -131,7 +147,7 @@ func ParseAll[KeyValue any](key string, eagerResult *neo4j.EagerResult) ([]KeyVa
 		get, b := record.Get(key)
 		if !b {
 			dlog.Log.Error("Invalid key", "key", key)
-			panic("Invalid key")
+			return nil, false
 		}
 		node := get.(neo4j.Node)
 
@@ -152,6 +168,7 @@ func ParseKey[KeyValue any](key string, eagerResult *neo4j.EagerResult) (KeyValu
 	get, b := eagerResult.Records[0].Get(key)
 	if !b {
 		dlog.Log.Error("Invalid key", "key", key)
+		// can only panic
 		panic("Invalid key")
 	}
 	node := get.(neo4j.Node)
@@ -160,38 +177,12 @@ func ParseKey[KeyValue any](key string, eagerResult *neo4j.EagerResult) (KeyValu
 	return result, true
 }
 
-func Parse2Key[FirstKeyValue any, SecondKeyValue any](firstKey, secondKey string, eagerResult *neo4j.EagerResult) (FirstKeyValue, SecondKeyValue, bool) {
-	var (
-		firstResult  FirstKeyValue
-		secondResult SecondKeyValue
-	)
-	if len(eagerResult.Records) == 0 {
-		return firstResult, secondResult, false
-	}
-
-	get, b := eagerResult.Records[0].Get(firstKey)
-	if !b {
-		dlog.Log.Error("Invalid key", "key", &firstKey)
-		panic("Invalid key")
-	}
-	firstResult = parse[FirstKeyValue](get.(neo4j.Node).Props)
-	if len(eagerResult.Records) == 1 {
-		return firstResult, secondResult, false
-	}
-	get, b = eagerResult.Records[1].Get(secondKey)
-	if !b {
-		dlog.Log.Error("Invalid key", "key", secondKey)
-		panic("Invalid key")
-	}
-	secondResult = parse[SecondKeyValue](get.(neo4j.Node).Props)
-	return firstResult, secondResult, true
-}
-
 func parse[RESULT any](props map[string]any) RESULT {
 	var result RESULT
 	err := mapstructure.Decode(props, &result)
 	if err != nil {
 		dlog.Log.Error("Failed to decode result", "err", err)
+		// can only panic
 		panic(err)
 	}
 	return result
