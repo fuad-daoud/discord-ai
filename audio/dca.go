@@ -118,7 +118,12 @@ func (d *DCA) write() {
 		panic(err)
 	}
 	fileName := newUUID.String() + ".opus"
-	filePath := "~/discord-ai/files" + fileName
+	dirs := "~/discord-ai/files"
+	err = os.MkdirAll(dirs, 0777)
+	if err != nil {
+		panic(err)
+	}
+	filePath := dirs + fileName
 	create, err := os.Create(filePath)
 	if err != nil {
 		panic(err)

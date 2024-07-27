@@ -100,6 +100,21 @@ var (
 			Description:          "list songs in queue, list them in each on separate line",
 			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
 		},
+		{
+			Name:                 "command_toggle_loop",
+			Description:          "toggle loop on/off and display the new value",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_toggle_loop_queue",
+			Description:          "toggle loopQueue on/off and display the new value",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
+		{
+			Name:                 "command_clear_queue",
+			Description:          "clear songs in queue",
+			ParameterDefinitions: map[string]*cohere.ToolParameterDefinitionsValue{},
+		},
 	}
 )
 

@@ -11,15 +11,18 @@ import (
 type Command string
 
 const (
-	Join   Command = "command_join"
-	Leave  Command = "command_leave"
-	Play   Command = "command_play"
-	Pause  Command = "command_pause"
-	Stop   Command = "command_stop"
-	Resume Command = "command_resume"
-	Skip   Command = "command_skip"
-	Search Command = "command_search"
-	Queue  Command = "command_queue"
+	Join            Command = "command_join"
+	Leave           Command = "command_leave"
+	Play            Command = "command_play"
+	Pause           Command = "command_pause"
+	Stop            Command = "command_stop"
+	Resume          Command = "command_resume"
+	Skip            Command = "command_skip"
+	Search          Command = "command_search"
+	Queue           Command = "command_queue"
+	ClearQueue      Command = "command_clear_queue"
+	ToggleLoopQueue Command = "command_toggle_loop_queue"
+	ToggleLoop      Command = "command_toggle_loop"
 )
 
 func AddCommandsChannelOnReadyHandler() {
@@ -58,6 +61,15 @@ func AddCommandsChannelOnReadyHandler() {
 				break
 			case Queue:
 				go queue(call)
+				break
+			case ClearQueue:
+				go clearQueue(call)
+				break
+			case ToggleLoopQueue:
+				go toggleLoopQueue(call)
+				break
+			case ToggleLoop:
+				go toggleLoop(call)
 				break
 			case Search:
 				go search(call)

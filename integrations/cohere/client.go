@@ -96,7 +96,7 @@ func handleStreamEvent(context *StreamContext) {
 	case "stream-end":
 		reason := context.response.StreamEnd.FinishReason
 		if reason == cohere.ChatStreamEndEventFinishReasonError {
-			go context.end("something went wrong sorry dear")
+			go context.end("something went wrong sorry dear try again after a few seconds")
 			break
 		} else if reason == cohere.ChatStreamEndEventFinishReasonErrorToxic {
 			go context.end("eww disgusting toxic")
