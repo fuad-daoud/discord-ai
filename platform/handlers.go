@@ -138,7 +138,7 @@ func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.Fi
 
 func HandleDeepgramVoicePackets(conn voice.Conn, props cohere.Properties) {
 
-	dlog.Log.Info("Added packets handler")
+	dlog.Log.Debug("Added packets handler")
 	guildID := conn.GuildID()
 
 	for {
