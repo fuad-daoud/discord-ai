@@ -118,7 +118,7 @@ func getPackets(call *cohere.CommandCall, data youtube.Data) (*[][]byte, error) 
 			return nil, err
 		}
 		y := youtube.Ytdlp{
-			Progress:      progress(call, message),
+			Progress:      progress(call, message, data.FullTitle),
 			ProgressError: progressError(),
 			Data:          data,
 		}
@@ -131,11 +131,11 @@ func getPackets(call *cohere.CommandCall, data youtube.Data) (*[][]byte, error) 
 	return packets, nil
 }
 
-func progress(call *cohere.CommandCall, message *discord.Message) func(percentage float64) {
+func progress(call *cohere.CommandCall, message *discord.Message, title string) func(percentage float64) {
 	return func(percentage float64) {
 		dlog.Log.Info("Progress ", "percentage", percentage)
 		_, err := platform.Rest().UpdateMessage(call.ExtraProperties.ChannelId, message.ID, discord.MessageUpdate{
-			Content: cohere.String(fmt.Sprintf("Downloading %v%%", percentage)),
+			Content: cohere.String(fmt.Sprintf("Downloading %s: %v%%", title, percentage)),
 		})
 		if err != nil {
 			panic(err)

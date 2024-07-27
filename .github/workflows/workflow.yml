@@ -41,9 +41,9 @@ jobs:
       - name: stop service if running
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 165.22.92.220
-          username: root
-          password: 1234Test
+          host: ${{ vars.server_ip }}
+          username: ${{ vars.user }}
+          password: ${{ vars.user_pass }}
           script: |
             service_status=$(pm2 jlist|jq '.[]|select(. | contains({name: "${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}"})).pm2_env.status')
             if [[ "$service_status" == "\"online\"" ]]; then pm2 stop ${{ github.ref_type == 'tag' && vars.SERVICE || format('{0}-{1}', vars.SERVICE, github.ref_name) }}; fi
