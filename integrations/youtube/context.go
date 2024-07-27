@@ -6,6 +6,7 @@ import (
 	"github.com/fuad-daoud/discord-ai/integrations/digitalocean"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/google/uuid"
+	"strings"
 	"time"
 )
 
@@ -21,16 +22,14 @@ type Queue []*QueueElement
 func (element *QueueElement) Load() error {
 	if element.Packets == nil {
 		download := digitalocean.Download("youtube/cache/" + element.Id + ".opus")
-		if download != nil {
+		if download != nil && *download.ContentLength > 0 {
 			element.Packets = audio.ReadDCA(download.Body)
 		} else {
 			y := Ytdlp{
 				Progress: func(percentage float64) {
 					dlog.Log.Info("downloading", "percentage", percentage)
 				},
-				ProgressError: func(input string) {
-					dlog.Log.Error("download error", "input", input)
-				},
+				ProgressError: progressError(),
 				Data: Data{
 					Id:             element.Id,
 					FullTitle:      element.FullTitle,
@@ -55,6 +54,14 @@ func (element *QueueElement) Load() error {
 		}
 	}
 	return nil
+}
+
+func progressError() func(input string) {
+	builder := strings.Builder{}
+	return func(input string) {
+		builder.WriteString(input)
+		dlog.Log.Error("download error", "input", builder.String())
+	}
 }
 
 func report() func(err error) {

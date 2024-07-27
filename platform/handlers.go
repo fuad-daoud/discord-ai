@@ -9,6 +9,7 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/fuad-daoud/discord-ai/integrations/cohere"
 	"github.com/fuad-daoud/discord-ai/integrations/deepgram"
+	"github.com/fuad-daoud/discord-ai/integrations/youtube"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
 	"net"
@@ -371,6 +372,10 @@ func voiceServerUpdateHandler(event *events.GuildVoiceStateUpdate) {
 		if id == nil {
 			dlog.Log.Info("Disconnected from voice channel")
 			deepgram.Stop()
+			player, _ := youtube.GetPlayer(event.OldVoiceState.GuildID)
+			if player != nil {
+				player.Idle()
+			}
 			return
 		}
 		return

@@ -20,14 +20,20 @@ type Player interface {
 	Save()
 	Skip() error
 	GetDBPlayer() DBPlayer
+	Idle()
+	Clear()
+	ToggleLoopQueue() bool
+	ToggleLoop() bool
 }
 
 type DefaultPlayer struct {
 	DBPlayer
-	queue   Queue
-	inst    InstructionType
-	conn    voice.Conn
-	GuildId string
+	queue     Queue
+	inst      InstructionType
+	conn      voice.Conn
+	GuildId   string
+	loopQueue bool
+	loop      bool
 }
 
 func (p *DefaultPlayer) GetDBPlayer() DBPlayer {
@@ -87,6 +93,12 @@ func (p *DefaultPlayer) Add(data Data, packets *[][]byte) error {
 	return nil
 }
 
+func (p *DefaultPlayer) ReAdd(element *QueueElement) error {
+	p.addQueueElement(element.DBQueueElement)
+	p.queue.add(element)
+	return nil
+}
+
 func (p *DefaultPlayer) Run(report func(err error)) {
 	if p.inst != IDLE {
 		return
@@ -96,7 +108,10 @@ func (p *DefaultPlayer) Run(report func(err error)) {
 
 func (p *DefaultPlayer) run(report func(err error)) {
 	dlog.Log.Info("Running player loop")
-
+	if len(p.queue) == 0 {
+		dlog.Log.Warn("running with empty queue")
+		return
+	}
 	p.inst = Resume
 	element := p.queue.Head()
 
@@ -113,13 +128,25 @@ func (p *DefaultPlayer) run(report func(err error)) {
 				index := element.packetIndex
 				if len(seg) != 0 && index >= len(seg) {
 					dlog.Log.Info("finished packets")
-					_, err := p.queue.Pop()
-					if err != nil {
-						report(err)
-						return
+					if !p.loop {
+						poppedElement, err := p.queue.Pop()
+						if err != nil {
+							report(err)
+							return
+						}
+						if p.loopQueue {
+							poppedElement.packetIndex = 0
+							err := p.ReAdd(poppedElement)
+							if err != nil {
+								report(err)
+								return
+							}
+						}
+					} else {
+						element.packetIndex = 0
 					}
 					if len(p.queue) > 0 {
-						go p.run(nil)
+						go p.run(report)
 					}
 					return
 				}
@@ -141,7 +168,7 @@ func (p *DefaultPlayer) run(report func(err error)) {
 		case Stop:
 			{
 				dlog.Log.Info("Got Stop instruction")
-				p.clear()
+				p.Clear()
 				p.inst = IDLE
 				return
 			}
@@ -164,7 +191,9 @@ func (p *DefaultPlayer) Pause() {
 }
 func (p *DefaultPlayer) Resume() {
 	p.inst = Resume
-	p.Run(nil)
+	go p.run(func(err error) {
+		dlog.Log.Error("Failed to resume player", "error", err)
+	})
 }
 func (p *DefaultPlayer) Seek(time time.Duration) {
 	dlog.Log.Info("seeking to ", "duration", time)
@@ -175,9 +204,28 @@ func (p *DefaultPlayer) Stop() {
 	p.inst = Stop
 }
 
-func (p *DefaultPlayer) clear() {
+func (p *DefaultPlayer) Clear() {
 	p.queue.clear()
 	p.queue = make(Queue, 0)
+}
+
+func (p *DefaultPlayer) Idle() {
+	p.inst = IDLE
+}
+
+func (p *DefaultPlayer) ToggleLoopQueue() bool {
+	if p.loop {
+		p.loop = false
+	}
+	p.loopQueue = !p.loopQueue
+	return p.loopQueue
+}
+func (p *DefaultPlayer) ToggleLoop() bool {
+	if p.loopQueue {
+		p.loop = false
+	}
+	p.loop = !p.loop
+	return p.loop
 }
 
 func (p *DefaultPlayer) Skip() error {

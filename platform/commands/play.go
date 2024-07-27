@@ -302,6 +302,10 @@ func resume(call *cohere.CommandCall) {
 		}
 		return
 	}
+	conn := platform.Client().VoiceManager().GetConn(call.ExtraProperties.GuildId)
+	if conn != nil {
+		player.SetConn(conn)
+	}
 	player.Resume()
 	cohere.Result <- &cohere.CommandResult{
 		Call: call.ToolCall,
@@ -407,5 +411,87 @@ func report(call *cohere.CommandCall) func(err error) {
 		_, _ = platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
 			Content: sprintf,
 		})
+	}
+}
+
+func clearQueue(call *cohere.CommandCall) {
+	player, err := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	if err != nil {
+		newUUID, _ := uuid.NewUUID()
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	player.Pause()
+	player.Clear()
+	cohere.Result <- &cohere.CommandResult{
+		Call: call.ToolCall,
+		Outputs: []map[string]interface{}{
+			{
+				"Success": true,
+			},
+		},
+	}
+
+}
+
+func toggleLoopQueue(call *cohere.CommandCall) {
+	player, err := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	if err != nil {
+		newUUID, _ := uuid.NewUUID()
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	loopQueue := player.ToggleLoopQueue()
+	cohere.Result <- &cohere.CommandResult{
+		Call: call.ToolCall,
+		Outputs: []map[string]interface{}{
+			{
+				"Success":   true,
+				"LoopQueue": loopQueue,
+			},
+		},
+	}
+
+}
+func toggleLoop(call *cohere.CommandCall) {
+	player, err := youtube.GetPlayer(call.ExtraProperties.GuildId)
+	if err != nil {
+		newUUID, _ := uuid.NewUUID()
+		cohere.Result <- &cohere.CommandResult{
+			Call: call.ToolCall,
+			Outputs: []map[string]interface{}{
+				{
+					"Success": false,
+					"uuid":    newUUID.String(),
+				},
+			},
+		}
+		return
+	}
+	loop := player.ToggleLoop()
+	cohere.Result <- &cohere.CommandResult{
+		Call: call.ToolCall,
+		Outputs: []map[string]interface{}{
+			{
+				"Success": true,
+				"Loop":    loop,
+			},
+		},
 	}
 }

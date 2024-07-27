@@ -1,6 +1,8 @@
 package youtube
 
-import "github.com/disgoorg/snowflake/v2"
+import (
+	"github.com/disgoorg/snowflake/v2"
+)
 
 var (
 	players = make(map[snowflake.ID]Player)
