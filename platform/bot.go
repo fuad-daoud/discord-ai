@@ -7,7 +7,6 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/rest"
-	"github.com/fuad-daoud/discord-ai/integrations/lava"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"golang.org/x/net/context"
 	"os"
@@ -42,7 +41,6 @@ func Setup() {
 		bot.WithEventListenerFunc(botIsUpReadyHandler),
 		//bot.WithEventListenerFunc(lava.OnVoiceServerUpdate),
 		//bot.WithEventListenerFunc(lava.OnVoiceStateUpdate),
-		bot.WithEventListenerFunc(lava.OnReady),
 
 		bot.WithEventListenerFunc(func(e *events.GuildMessageCreate) {
 			go messageCreateHandler(e)
@@ -52,9 +50,11 @@ func Setup() {
 		//bot.WithEventListenerFunc(addCommandsChannelOnReadyHandler),
 	)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
 	if err = clientTmp.OpenGateway(context.TODO()); err != nil {
+		// normal panic
 		panic(err)
 	}
 	clientTmp.EventManager().AddEventListeners(Handler{})

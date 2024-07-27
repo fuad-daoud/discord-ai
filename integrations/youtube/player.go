@@ -82,7 +82,7 @@ func (p *DefaultPlayer) Add(data Data, packets *[][]byte) error {
 		LikeCount:      data.LikeCount,
 		Channel:        data.Channel,
 		UploaderId:     data.UploaderId,
-		Url:            data.Url,
+		OriginalUrl:    data.Url,
 		UUID:           newUUID.String(),
 	}
 	p.addQueueElement(element)
@@ -173,7 +173,8 @@ func (p *DefaultPlayer) run(report func(err error)) {
 				return
 			}
 		default:
-			panic("unhandled default case")
+			dlog.Log.Error("invalid inst", "inst", p.inst)
+			return
 		}
 	}
 }

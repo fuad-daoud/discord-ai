@@ -15,7 +15,7 @@ func dbThreadCreateHandler(event *events.ThreadCreate) {
 	if event.Thread.OwnerID != event.Client().ApplicationID() {
 		return
 	}
-	db.InTransaction(func(write db.Write) {
+	err := db.InTransaction(func(write db.Write) error {
 		write(cypher.MergeN("t", db.Thread{
 			TextChannel: db.TextChannel{
 				Id:          event.ThreadID.String(),
@@ -36,7 +36,12 @@ func dbThreadCreateHandler(event *events.ThreadCreate) {
 			}),
 			cypher.Merge("(mb)-[:CREATED]->(t)"),
 		)
+		return nil
 	})
+	if err != nil {
+		dlog.Log.Error("Error in dbThreadCreateHandler: ", err)
+		return
+	}
 	dlog.Log.Debug("Finished db ThreadCreateHandler")
 }
 
@@ -46,20 +51,35 @@ func dbMessageUpdateHandler(event *events.GuildMessageUpdate) {
 		return
 	}
 
-	result := db.Query(cypher.MatchN("m", db.Message{Id: event.Message.ID.String()}), cypher.Return("m"))
-
+	result, err := db.Query(cypher.MatchN("m", db.Message{Id: event.Message.ID.String()}), cypher.Return("m"))
+	if err != nil {
+		dlog.Log.Error("Error in dbMessageUpdateHandler: ", err)
+		return
+	}
 	oldMessage, _ := cypher.ParseKey[db.Message]("m", result)
 
-	db.InTransaction(func(write db.Write) {
-		write(cypher.MatchN("m", oldMessage),
-			cypher.Set("m", db.Message{
-				Id:          oldMessage.Id,
-				Text:        strings.ReplaceAll(event.Message.Content, "\"", "'"),
-				UpdatedDate: event.Message.CreatedAt.String(),
-				CreatedDate: oldMessage.CreatedDate,
-			}),
+	err = db.InTransaction(func(write db.Write) error {
+		set, err := cypher.Set("m", db.Message{
+			Id:          oldMessage.Id,
+			Text:        strings.ReplaceAll(event.Message.Content, "\"", "'"),
+			UpdatedDate: event.Message.CreatedAt.String(),
+			CreatedDate: oldMessage.CreatedDate,
+		})
+		if err != nil {
+			return err
+		}
+		_, err = write(cypher.MatchN("m", oldMessage),
+			set,
 			cypher.Return("m"))
+		if err != nil {
+			return err
+		}
+		return nil
 	})
+	if err != nil {
+		dlog.Log.Error("Error in dbMessageUpdateHandler: ", err)
+		return
+	}
 	dlog.Log.Debug("Finished db MessageUpdateHandler")
 }
 
@@ -80,13 +100,18 @@ func dbMessageCreateHandler(event *events.GuildMessageCreate) {
 	member := db.Member{
 		Id: event.Message.Author.ID.String(),
 	}
-	db.InTransaction(func(write db.Write) {
+	err := db.InTransaction(func(write db.Write) error {
 		if channel.Type() == discord.ChannelTypeGuildPublicThread {
 			threadMessageCreateHandler(write, channel, member, message)
 		} else {
 			createMessageHandler(write, channel, event.GuildID.String(), member, message)
 		}
+		return nil
 	})
+	if err != nil {
+		dlog.Log.Error("Error in dbMessageCreateHandler: ", err)
+		return
+	}
 	dlog.Log.Debug("Finished db messageCreateHandler")
 }
 
@@ -123,13 +148,13 @@ func threadMessageCreateHandler(write db.Write, channel discord.Channel, member 
 }
 
 func dbReadyHandler(event *events.Ready) {
-	db.InTransaction(func(write db.Write) {
+	err := db.InTransaction(func(write db.Write) error {
 		for _, guild := range event.Guilds {
 			dlog.Log.Debug("Merging guild", "ID", guild.ID)
 			guild, err := event.Client().Rest().GetGuild(guild.ID, false)
 			if err != nil {
 				dlog.Log.Error(err.Error())
-				panic(err)
+				return err
 			}
 			dlog.Log.Debug("Found guild", "name", guild.Name)
 			guildNode := db.Guild{
@@ -140,16 +165,25 @@ func dbReadyHandler(event *events.Ready) {
 
 			dlog.Log.Debug("Merged guild", "name", guild.Name)
 
-			addMembers(write, err, event, guild, guildNode)
+			err = addMembers(write, err, event, guild, guildNode)
+			if err != nil {
+				dlog.Log.Error("Error in dbReadyHandler: ", err)
+				return err
+			}
 		}
+		return nil
 	})
+	if err != nil {
+		dlog.Log.Error("Error in dbReadyHandler: ", err)
+		return
+	}
 }
 
-func addMembers(write db.Write, err error, event *events.Ready, guild *discord.RestGuild, guildNode db.Guild) {
+func addMembers(write db.Write, err error, event *events.Ready, guild *discord.RestGuild, guildNode db.Guild) error {
 	members, err := event.Client().Rest().GetMembers(guild.ID, 1000, snowflake.MustParse("0"))
 	if err != nil {
 		dlog.Log.Error("Failed to get members", "guild", guild.ID, "error", err)
-		panic(err)
+		return err
 	}
 	for _, member := range members {
 		dlog.Log.Debug("Found member", "name", member.User.Username, "id", member.User.ID)
@@ -174,4 +208,5 @@ func addMembers(write db.Write, err error, event *events.Ready, guild *discord.R
 			cypher.Merge("(g)-[:HAS]->(m)-[:MEMBER_OF]->(g)"),
 		)
 	}
+	return nil
 }

@@ -21,8 +21,8 @@ type Queue []*QueueElement
 
 func (element *QueueElement) Load() error {
 	if element.Packets == nil {
-		download := digitalocean.Download("youtube/cache/" + element.Id + ".opus")
-		if download != nil && *download.ContentLength > 0 {
+		download, err := digitalocean.Download("youtube/cache/" + element.Id + ".opus")
+		if err == nil && download != nil && *download.ContentLength > 0 {
 			element.Packets = audio.ReadDCA(download.Body)
 		} else {
 			y := Ytdlp{
@@ -42,7 +42,7 @@ func (element *QueueElement) Load() error {
 					LikeCount:      element.LikeCount,
 					Channel:        element.Channel,
 					UploaderId:     element.UploaderId,
-					Url:            element.Url,
+					Url:            element.OriginalUrl,
 					filled:         true,
 				},
 			}

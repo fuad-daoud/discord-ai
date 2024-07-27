@@ -1,7 +1,6 @@
 package dlog
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -72,19 +71,21 @@ func (a *Archiver) process() {
 func copyFiles(writer io.Writer, input *os.File) (int, error) {
 	stat, err := input.Stat()
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	bytes := make([]byte, stat.Size())
 	read, err := input.ReadAt(bytes, 0)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	if stat.Size() != int64(read) {
-		panic(fmt.Errorf("expected %d bytes, got %d", stat.Size(), read))
+		Log.Error("expected", "bytes", stat.Size(), "got", read)
+		return 0, err
+
 	}
 	n, err := writer.Write(bytes)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	return n, nil
 }

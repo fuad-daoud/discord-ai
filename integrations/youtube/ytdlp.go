@@ -191,7 +191,7 @@ func (y *Ytdlp) cache(filePath string) {
 	tagsJson, _ := json.Marshal(y.Data.Tags)
 	categoriesJson, _ := json.Marshal(y.Data.Categories)
 
-	digitalocean.Upload(filePath, "/youtube/cache/"+y.Data.Id+".opus", map[string]*string{
+	err := digitalocean.Upload(filePath, "/youtube/cache/"+y.Data.Id+".opus", map[string]*string{
 		"Id":         aws.String(y.Data.Id),
 		"FullTitle":  aws.String(y.Data.FullTitle),
 		"Tags":       aws.String(string(tagsJson)),
@@ -203,8 +203,12 @@ func (y *Ytdlp) cache(filePath string) {
 		"LikeCount":      aws.String(strconv.Itoa(y.Data.LikeCount)),
 		"Channel":        aws.String(y.Data.Channel),
 		"UploaderId":     aws.String(y.Data.UploaderId),
-		"Url":            aws.String(y.Data.Url),
+		"OriginalUrl":    aws.String(y.Data.Url),
 	})
+	if err != nil {
+		dlog.Log.Error("failed uploading to digital ocean", "err", err)
+		return
+	}
 }
 
 type Data struct {

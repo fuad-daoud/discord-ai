@@ -1,7 +1,6 @@
 package platform
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
@@ -50,11 +49,6 @@ func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.Fi
 		}
 		messageId := handleThread(properties.ChannelId, selfUser.User, processingMessage)
 
-		//err = Rest().AddReaction(channelId, message.ID, "🌙")
-		//if err != nil {
-		//	panic(err)
-		//}
-
 		streamResult := cohere.StreamChat(message, properties.ChannelId.String(), cohere.Properties{
 			MessageId: properties.MessageId,
 			UserId:    snowflake.MustParse(userId),
@@ -70,14 +64,15 @@ func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.Fi
 			switch result.Type {
 			case cohere.Start:
 				{
-
 					updateMessage, err := Rest().UpdateMessage(properties.ChannelId, messageId, discord.MessageUpdate{Content: cohere.String("Hmmm🤔... ")})
 					if err != nil {
-						panic(err)
+						dlog.Log.Error("could not update message: ", err)
+						return
 					}
 					err = Rest().AddReaction(properties.ChannelId, messageId, "🔵")
 					if err != nil {
-						panic(err)
+						dlog.Log.Error("could not add reaction: ", err)
+						return
 					}
 					dlog.Log.Debug("started message:", "ID", updateMessage.ID.String())
 					break
@@ -95,7 +90,8 @@ func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.Fi
 
 						_, err := Rest().UpdateMessage(properties.ChannelId, messageId, discord.MessageUpdate{Content: cohere.String(string(byteString))})
 						if err != nil {
-							panic(err)
+							dlog.Log.Error("could not update message: ", err)
+							return
 						}
 						//dlog.Log.Debug("updated message:", "ID", updateMessage.ID.String())
 					}()
@@ -105,17 +101,20 @@ func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.Fi
 				{
 					updateMessage, err := Rest().UpdateMessage(properties.ChannelId, messageId, discord.MessageUpdate{Content: cohere.String(result.Message)})
 					if err != nil {
-						panic(err)
+						dlog.Log.Error("could not update message: ", err)
+						return
 					}
 					dlog.Log.Debug("updated message:", "ID", updateMessage.ID.String())
 
 					err = Rest().RemoveOwnReaction(properties.ChannelId, messageId, "🔵")
 					if err != nil {
-						panic(err)
+						dlog.Log.Error("could not remove reaction: ", err)
+						return
 					}
 					err = Rest().AddReaction(properties.ChannelId, messageId, "🟢")
 					if err != nil {
-						panic(err)
+						dlog.Log.Error("could not add reaction: ", err)
+						return
 					}
 					dlog.Log.Debug("finished message:", "ID", messageId)
 
@@ -157,7 +156,11 @@ func HandleDeepgramVoicePackets(conn voice.Conn, props cohere.Properties) {
 		if userId.String() == "0" {
 			continue
 		}
-		deepgram.MakeClient(userId.String(), finishedCallBack(conn, props))
+		_, err = deepgram.MakeClient(userId.String(), finishedCallBack(conn, props))
+		if err != nil {
+			dlog.Log.Error("failed to create deepgram client")
+			return
+		}
 		deepgram.Write(packet.Opus, userId.String())
 	}
 }
@@ -166,7 +169,8 @@ func handleThread(threadId snowflake.ID, user discord.User, message string) snow
 	message = fmt.Sprintf("%s: %s", user.Username, message)
 	createMessage, err := Rest().CreateMessage(threadId, discord.MessageCreate{Content: message})
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("failed to create message", "err", err)
+		return 0
 	}
 	dlog.Log.Info("Created message", "ID", createMessage.ID)
 	return createMessage.ID
@@ -188,12 +192,16 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 	if channel.Type() == discord.ChannelTypeGuildPublicThread {
 		thread := channel.(discord.GuildThread)
 		dlog.Log.Info("Got thread", "ID", thread.ID())
-		streamMessage(thread.ID(), messageContent, cohere.Properties{
+		err := streamMessage(thread.ID(), messageContent, cohere.Properties{
 			MessageId: event.MessageID,
 			UserId:    authorId,
 			GuildId:   event.GuildID,
 			ChannelId: thread.ID(),
 		})
+		if err != nil {
+			dlog.Log.Error("error streaming", "err", err)
+			return
+		}
 	} else {
 		if channel.ID().String() != "1252273230727876619" && channel.ID().String() != "1252536839886082109" && channel.ID().String() != "1256856679379636276" {
 			return
@@ -217,43 +225,32 @@ func messageCreateHandler(event *events.GuildMessageCreate) {
 		newThread, err := restClient.CreateThreadFromMessage(channel.ID(), event.MessageID, discord.ThreadCreateFromMessage{Name: threadName, AutoArchiveDuration: 1440})
 		if err != nil {
 			dlog.Log.Error("could not create discord thread", err.Error())
-			panic(err)
+			return
 		}
-		streamMessage(newThread.ID(), messageContent, cohere.Properties{
+		err = streamMessage(newThread.ID(), messageContent, cohere.Properties{
 			MessageId: event.MessageID,
 			UserId:    authorId,
 			GuildId:   event.GuildID,
 			ChannelId: newThread.ID(),
 		})
+		if err != nil {
+			dlog.Log.Error("could not stream message", "err", err)
+			return
+		}
 	}
-}
-func banner() string {
-	readFile, err := os.Open("./assets/banner.txt")
-	defer readFile.Close()
-	if err != nil {
-		dlog.Log.Error(err.Error())
-		panic(err)
-	}
-	fileScanner := bufio.NewScanner(readFile)
-
-	fileScanner.Split(bufio.ScanLines)
-	builder := strings.Builder{}
-	for fileScanner.Scan() {
-		builder.WriteString(fileScanner.Text())
-	}
-
-	return builder.String()
 }
 func botIsUpReadyHandler(event *events.Ready) {
 	user, _ := event.Client().Caches().SelfUser()
 	dlog.Log.Info("Bot", "username", user.Username)
 	hostname, err := os.Hostname()
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("could not get hostname", "error", err)
+		return
 	}
 	ips, err := GetLocalIPs()
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("could not get local IPs", "error", err)
+		return
 	}
 	content := hostname + " IPs [ "
 	for _, ip := range ips {
@@ -264,7 +261,8 @@ func botIsUpReadyHandler(event *events.Ready) {
 		Content: content,
 	})
 	if err != nil {
-		panic(err)
+		dlog.Log.Error("could not create discord message", "error", err)
+		return
 	}
 	dlog.Log.Info("Created message", "ID", message.ID.String(), "content", message.Content)
 }
@@ -285,21 +283,21 @@ func GetLocalIPs() ([]net.IP, error) {
 	return ips, nil
 }
 
-func streamMessage(channelId snowflake.ID, content string, prop cohere.Properties) {
+func streamMessage(channelId snowflake.ID, content string, prop cohere.Properties) error {
 	processingMessage := "Dazzling✨💫"
 
 	message, err := Rest().CreateMessage(channelId, discord.MessageCreate{
 		Content: processingMessage,
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	streamResult := cohere.StreamChat(content, channelId.String(), prop)
 
 	err = Rest().AddReaction(channelId, message.ID, "🌙")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	byteLength := 0
@@ -312,11 +310,11 @@ func streamMessage(channelId snowflake.ID, content string, prop cohere.Propertie
 			{
 				updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String("Thinking🤔...")})
 				if err != nil {
-					panic(err)
+					return err
 				}
 				err = Rest().AddReaction(channelId, message.ID, "🔵")
 				if err != nil {
-					panic(err)
+					return err
 				}
 				dlog.Log.Debug("started message:", "ID", updateMessage.ID.String())
 				break
@@ -334,7 +332,8 @@ func streamMessage(channelId snowflake.ID, content string, prop cohere.Propertie
 
 					_, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String(string(byteString))})
 					if err != nil {
-						panic(err)
+						dlog.Log.Error("error updating", "err", err)
+						return
 					}
 					//dlog.Log.Debug("updated message:", "ID", updateMessage.ID.String())
 				}()
@@ -344,23 +343,24 @@ func streamMessage(channelId snowflake.ID, content string, prop cohere.Propertie
 			{
 				updateMessage, err := Rest().UpdateMessage(channelId, message.ID, discord.MessageUpdate{Content: cohere.String(result.Message)})
 				if err != nil {
-					panic(err)
+					return err
 				}
 				dlog.Log.Debug("updated message:", "ID", updateMessage.ID.String())
 
 				err = Rest().RemoveOwnReaction(channelId, message.ID, "🔵")
 				if err != nil {
-					panic(err)
+					return err
 				}
 				err = Rest().AddReaction(channelId, message.ID, "🟢")
 				if err != nil {
-					panic(err)
+					return err
 				}
 				dlog.Log.Debug("finished message:", "ID", message.ID)
-				return
+				return nil
 			}
 		}
 	}
+	return nil
 }
 
 type Process func(message, messageId, userId, threadId string) string

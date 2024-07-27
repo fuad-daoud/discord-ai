@@ -1,6 +1,7 @@
 package deepgram
 
 import (
+	"errors"
 	"github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
 	deepgramLive "github.com/deepgram/deepgram-go-sdk/pkg/client/live"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
@@ -40,7 +41,7 @@ func Write(p []byte, userId string) {
 	//dlog.Log.Info("deepgram reading", "bytes", voiceBytes)
 }
 
-func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.Client {
+func MakeClient(userId string, finishedCallback FinishedCallBack) (*deepgramLive.Client, error) {
 	m.Lock()
 	defer m.Unlock()
 	client, ok := clients[userId]
@@ -94,20 +95,20 @@ func MakeClient(userId string, finishedCallback FinishedCallBack) *deepgramLive.
 		callback := &MyCallback{Builder: strings.Builder{}, SpeechFinal: make(chan bool)}
 		dgClient, err := deepgramLive.New(ctx, apiKey, &clientOptions, &transcriptOptions, callback)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		wsconn := dgClient.Connect()
 		if wsconn == false {
-			panic("deepgramLive.Connect failed")
+			return nil, errors.New("deepgramLive.Connect failed")
 		}
 
 		dlog.Log.Info("Connected to deepgram client!", "userId", userId)
 
 		go stopWhenFinished(userId, callback, finishedCallback)
 		clients[userId] = dgClient
-		return dgClient
+		return dgClient, nil
 	}
-	return client
+	return client, nil
 }
 
 type FinishedCallBack func(message string, userId string)

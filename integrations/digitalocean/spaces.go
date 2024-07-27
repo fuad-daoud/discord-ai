@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-func Download(filePath string) *s3.GetObjectOutput {
+func Download(filePath string) (*s3.GetObjectOutput, error) {
 	key := "DO006HT8YM4CZHXNLL6D"
 	secret := "hU5t7MNPk1iU/yPnmS3XPUCcwtFIvA2njO01ASX4eAU"
 
@@ -23,7 +23,7 @@ func Download(filePath string) *s3.GetObjectOutput {
 
 	newSession, err := session.NewSession(s3Config)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	s3Client := s3.New(newSession)
 
@@ -35,17 +35,17 @@ func Download(filePath string) *s3.GetObjectOutput {
 
 	if err != nil {
 		if requestFailure, ok := err.(awserr.RequestFailure); ok && requestFailure.StatusCode() == http.StatusNotFound {
-			return nil
+			return nil, err
 		}
-		panic(err)
+		return nil, err
 	}
-	return getObject
+	return getObject, nil
 }
 
-func Upload(opusFile, filePath string, tags map[string]*string) {
+func Upload(opusFile, filePath string, tags map[string]*string) error {
 	open, err := os.Open(opusFile)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	key := "DO006HT8YM4CZHXNLL6D"                           // Access key pair. You can create access key pairs using the control panel or API.
 	secret := "hU5t7MNPk1iU/yPnmS3XPUCcwtFIvA2njO01ASX4eAU" // Secret access key defined through an environment variable.
@@ -59,6 +59,7 @@ func Upload(opusFile, filePath string, tags map[string]*string) {
 
 	newSession, err := session.NewSession(s3Config)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
 	s3Client := s3.New(newSession)
@@ -73,6 +74,8 @@ func Upload(opusFile, filePath string, tags map[string]*string) {
 
 	_, err = s3Client.PutObject(&object)
 	if err != nil {
+		// normal panic
 		panic(err)
 	}
+	return nil
 }

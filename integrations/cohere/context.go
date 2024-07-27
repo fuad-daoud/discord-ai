@@ -149,6 +149,7 @@ func readInst() string {
 	defer readFile.Close()
 	if err != nil {
 		dlog.Log.Error(err.Error())
+		//normal panic
 		panic(err)
 	}
 	fileScanner := bufio.NewScanner(readFile)
