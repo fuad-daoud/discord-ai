@@ -23,6 +23,7 @@ const (
 func ReadDCA(in io.ReadCloser) *[][]byte {
 	packets := make([][]byte, 0)
 	go func() {
+		defer rec()
 		var opuslen int16
 		for {
 			err := binary.Read(in, binary.LittleEndian, &opuslen)
@@ -70,6 +71,7 @@ func (d *DCA) Convert(in io.Reader) chan []byte {
 }
 
 func (d *DCA) process(in io.Reader) {
+	defer rec()
 	OpusEncoder, err := gopus.NewEncoder(audioFrameRate, audioChannels, gopus.Audio)
 	if err != nil {
 		dlog.Log.Error("Error creating opus encoder", "err", err)
@@ -115,6 +117,7 @@ func (d *DCA) process(in io.Reader) {
 	}
 }
 func (d *DCA) write() {
+	defer rec()
 	newUUID, err := uuid.NewUUID()
 	if err != nil {
 		dlog.Log.Error("Error generating UUID", "err", err)
@@ -173,4 +176,10 @@ func encode(OpusEncoder *gopus.Encoder, buf []int16) ([]byte, error) {
 		return nil, err
 	}
 	return opus, nil
+}
+
+func rec() {
+	if r := recover(); r != nil {
+		dlog.Log.Error("Recovered ", "msg", r)
+	}
 }

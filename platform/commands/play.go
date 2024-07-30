@@ -12,11 +12,11 @@ import (
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"github.com/fuad-daoud/discord-ai/platform"
 	"github.com/google/uuid"
-	"strings"
 	"time"
 )
 
 func play(call *cohere.CommandCall) {
+	defer rec()
 	dlog.Log.Info("starting play function")
 	dlog.Log.Info("play call", "params", call.ToolCall.Parameters)
 	toolCall := call.ToolCall
@@ -39,6 +39,7 @@ func play(call *cohere.CommandCall) {
 	}
 	packets, err := getPackets(call, data)
 	if err != nil {
+		dlog.Log.Error("", "err", err)
 		newUUID, _ := uuid.NewUUID()
 		cohere.Result <- &cohere.CommandResult{
 			Call: call.ToolCall,
@@ -59,6 +60,7 @@ func play(call *cohere.CommandCall) {
 
 	player, err = youtube.GetPlayer(call.ExtraProperties.GuildId)
 	if err != nil {
+		dlog.Log.Error("", "err", err)
 		newUUID, _ := uuid.NewUUID()
 		cohere.Result <- &cohere.CommandResult{
 			Call: call.ToolCall,
@@ -75,6 +77,7 @@ func play(call *cohere.CommandCall) {
 	player.SetConn(conn)
 	err = player.Add(data, packets)
 	if err != nil {
+		dlog.Log.Error("", "err", err)
 		newUUID, _ := uuid.NewUUID()
 		cohere.Result <- &cohere.CommandResult{
 			Call: call.ToolCall,
@@ -109,47 +112,21 @@ func getPackets(call *cohere.CommandCall, data youtube.Data) (*[][]byte, error) 
 	if err == nil && download != nil {
 		dlog.Log.Info("cache found")
 		packets = audio.ReadDCA(download.Body)
+	} else if err != nil {
+		return nil, err
 	} else {
 		dlog.Log.Info("no cache ..")
-		message, err := platform.Rest().CreateMessage(call.ExtraProperties.ChannelId, discord.MessageCreate{
-			Content: "Downloading ...",
-		})
-		if err != nil {
-			return nil, err
-		}
+
 		y := youtube.Ytdlp{
-			Progress:      progress(call, message, data.FullTitle),
-			ProgressError: progressError(),
-			Data:          data,
+			Data: data,
 		}
 
-		packets, err = y.GetAudio(report(call))
+		packets, err = y.GetAudio()
 		if err != nil {
 			return nil, err
 		}
 	}
 	return packets, nil
-}
-
-func progress(call *cohere.CommandCall, message *discord.Message, title string) func(percentage float64) {
-	return func(percentage float64) {
-		dlog.Log.Info("Progress ", "percentage", percentage)
-		_, err := platform.Rest().UpdateMessage(call.ExtraProperties.ChannelId, message.ID, discord.MessageUpdate{
-			Content: cohere.String(fmt.Sprintf("Downloading %s: %v%%", title, percentage)),
-		})
-		if err != nil {
-			dlog.Log.Error("can't log progress", "percentage", percentage, "error", err)
-			return
-		}
-	}
-}
-
-func progressError() func(input string) {
-	builder := strings.Builder{}
-	return func(input string) {
-		builder.WriteString(input)
-		dlog.Log.Error("something wrong happened", "input", builder.String())
-	}
 }
 
 func getConn(call *cohere.CommandCall) (voice.Conn, bool) {

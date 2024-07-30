@@ -80,6 +80,7 @@ func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.Fi
 			case cohere.Text:
 				{
 					go func() {
+						go rec()
 						copiedBytes := copy(byteString[byteLength:], result.Message)
 						newBytes += copiedBytes
 						byteLength += copiedBytes
@@ -136,7 +137,7 @@ func finishedCallBack(conn voice.Conn, properties cohere.Properties) deepgram.Fi
 }
 
 func HandleDeepgramVoicePackets(conn voice.Conn, props cohere.Properties) {
-
+	defer rec()
 	dlog.Log.Debug("Added packets handler")
 	guildID := conn.GuildID()
 
@@ -158,10 +159,16 @@ func HandleDeepgramVoicePackets(conn voice.Conn, props cohere.Properties) {
 		}
 		_, err = deepgram.MakeClient(userId.String(), finishedCallBack(conn, props))
 		if err != nil {
-			dlog.Log.Error("failed to create deepgram client")
+			dlog.Log.Error("failed to create deepgram ytclient")
 			return
 		}
 		deepgram.Write(packet.Opus, userId.String())
+	}
+}
+
+func rec() {
+	if r := recover(); r != nil {
+		dlog.Log.Error("Recovered ", "msg", r)
 	}
 }
 
@@ -322,6 +329,7 @@ func streamMessage(channelId snowflake.ID, content string, prop cohere.Propertie
 		case cohere.Text:
 			{
 				go func() {
+					defer rec()
 					copiedBytes := copy(byteString[byteLength:], result.Message)
 					newBytes += copiedBytes
 					byteLength += copiedBytes

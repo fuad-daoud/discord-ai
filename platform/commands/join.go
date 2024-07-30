@@ -37,60 +37,65 @@ func AddCommandsChannelOnReadyHandler() {
 		//}
 		//play(call)
 		for call := range cohere.Call {
-			switch Command(call.Name) {
-			case Join:
-				go join(call)
-				break
-			case Leave:
-				go leave(call)
-				break
-			case Play:
-				go play(call)
-				break
-			case Pause:
-				go pause(call)
-				break
-			case Stop:
-				go stop(call)
-				break
-			case Resume:
-				go resume(call)
-				break
-			case Skip:
-				go skip(call)
-				break
-			case Queue:
-				go queue(call)
-				break
-			case ClearQueue:
-				go clearQueue(call)
-				break
-			case ToggleLoopQueue:
-				go toggleLoopQueue(call)
-				break
-			case ToggleLoop:
-				go toggleLoop(call)
-				break
-			case Search:
-				go search(call)
-				break
-			default:
-				{
-					cohere.Result <- &cohere.CommandResult{
-						Call: call.ToolCall,
-						Outputs: []map[string]interface{}{
-							{
-								"Success":     false,
-								"Description": "command not implemented",
-							},
-						},
-					}
-					break
-				}
-			}
+			go runCommand(call)
 		}
 	}()
 
+}
+
+func runCommand(call *cohere.CommandCall) {
+	defer rec()
+	switch Command(call.Name) {
+	case Join:
+		join(call)
+		break
+	case Leave:
+		leave(call)
+		break
+	case Play:
+		play(call)
+		break
+	case Pause:
+		pause(call)
+		break
+	case Stop:
+		stop(call)
+		break
+	case Resume:
+		resume(call)
+		break
+	case Skip:
+		skip(call)
+		break
+	case Queue:
+		queue(call)
+		break
+	case ClearQueue:
+		clearQueue(call)
+		break
+	case ToggleLoopQueue:
+		toggleLoopQueue(call)
+		break
+	case ToggleLoop:
+		toggleLoop(call)
+		break
+	case Search:
+		search(call)
+		break
+	default:
+		{
+			cohere.Result <- &cohere.CommandResult{
+				Call: call.ToolCall,
+				Outputs: []map[string]interface{}{
+					{
+						"Success":     false,
+						"Description": "command not implemented",
+					},
+				},
+			}
+			break
+		}
+	}
 }
 
 func join(call *cohere.CommandCall) {
@@ -193,4 +198,10 @@ func join(call *cohere.CommandCall) {
 
 	dlog.Log.Info("Finished joining function")
 	return
+}
+
+func rec() {
+	if r := recover(); r != nil {
+		dlog.Log.Error("Recovered ", "msg", r)
+	}
 }
