@@ -5,9 +5,6 @@ import (
 	"github.com/fuad-daoud/discord-ai/audio"
 	"github.com/fuad-daoud/discord-ai/integrations/digitalocean"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
-	"github.com/google/uuid"
-	"strings"
-	"time"
 )
 
 type QueueElement struct {
@@ -26,10 +23,6 @@ func (element *QueueElement) Load() error {
 			element.Packets = audio.ReadDCA(download.Body)
 		} else {
 			y := Ytdlp{
-				Progress: func(percentage float64) {
-					dlog.Log.Info("downloading", "percentage", percentage)
-				},
-				ProgressError: progressError(),
 				Data: Data{
 					Id:             element.Id,
 					FullTitle:      element.FullTitle,
@@ -47,29 +40,13 @@ func (element *QueueElement) Load() error {
 				},
 			}
 			var err error
-			element.Packets, err = y.GetAudio(report())
+			element.Packets, err = y.GetAudio()
 			if err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-func progressError() func(input string) {
-	builder := strings.Builder{}
-	return func(input string) {
-		builder.WriteString(input)
-		dlog.Log.Error("download error", "input", builder.String())
-	}
-}
-
-func report() func(err error) {
-	return func(err error) {
-		newUUID, _ := uuid.NewUUID()
-		now := time.Now()
-		dlog.Log.Error("reporting problem", "err", err, "uuid", newUUID.String(), "time", now)
-	}
 }
 
 func (q *Queue) Head() *QueueElement {

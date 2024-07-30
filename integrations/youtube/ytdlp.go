@@ -6,34 +6,30 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fuad-daoud/discord-ai/audio"
 	"github.com/fuad-daoud/discord-ai/integrations/digitalocean"
+	"github.com/fuad-daoud/discord-ai/integrations/youtube/ytclient"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
-	"github.com/google/uuid"
 	"golang.org/x/net/context"
 	"io"
-	"os"
 	"os/exec"
 	"strconv"
-	"strings"
-	"time"
 )
 
 type Ytdlp struct {
-	Progress      func(percentage float64)
-	ProgressError func(input string)
-	Data          Data
+	Data Data
 }
 
-func (y *Ytdlp) GetAudio(report func(err error)) (*[][]byte, error) {
+func (y *Ytdlp) GetAudio() (*[][]byte, error) {
 	if !y.Data.filled {
 		return nil, errors.New("did not search for Data first")
 	}
-	result, err := y.videoPackets(report)
+	result, err := y.videoPackets()
 	if err != nil {
 		return nil, err
 	}
 	segmants := make([][]byte, 0)
 
 	go func() {
+		defer rec()
 		for {
 			seg, ok := <-result
 			if !ok {
@@ -44,10 +40,17 @@ func (y *Ytdlp) GetAudio(report func(err error)) (*[][]byte, error) {
 	}()
 	return &segmants, nil
 }
+func rec() {
+	if r := recover(); r != nil {
+		dlog.Log.Error("Recovered ", "msg", r)
+	}
+}
 
-func (y *Ytdlp) videoPackets(report func(err error)) (chan []byte, error) {
-	ytdlpAudio, _ := y.download(report)
-
+func (y *Ytdlp) videoPackets() (chan []byte, error) {
+	ytdlpAudio, err := y.download()
+	if err != nil {
+		return nil, err
+	}
 	ffmpeg, err := audio.FFMPEG(ytdlpAudio)
 	if err != nil {
 		return nil, err
@@ -60,102 +63,20 @@ func (y *Ytdlp) videoPackets(report func(err error)) (chan []byte, error) {
 	return dca.Convert(ffmpeg), nil
 }
 
-func (y *Ytdlp) download(report func(err error)) (io.Reader, error) {
-	start := time.Now()
-	newUUID, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
-	cmd := exec.CommandContext(context.Background(), "/home/fuad/GolandProjects/discord-ai/artifacts/yt-dlp",
-		"--progress-template", "%(progress._percent_str)s",
-		"--progress-delta", "1",
-		"--no-cache-dir",
-		"--no-clean-info-json",
-		"--concurrent-fragments", "16",
-		"--lazy-playlist",
-		"--audio-format", "opus",
-		"--no-write-comments",
-		"--extract-audio",
-		"--quiet",
-		//"--color", "no_color",
-		//"--no-colors",
-		"--progress",
-		"--output", "/tmp/audio/"+newUUID.String(),
-		//"--simulate",
-		"--no-warnings",
-		y.Data.Url,
-	)
-
-	dlog.Log.Info("starting youtube command")
-
-	stdout, err := cmd.StdoutPipe()
+func (y *Ytdlp) download() (io.Reader, error) {
+	client := ytclient.Client{}
+	video, err := client.GetVideo(y.Data.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	stderr, err := cmd.StderrPipe()
+	formats := video.Formats.WithAudioChannels()
+	stream, _, err := client.GetStream(video, &formats[0])
 	if err != nil {
 		return nil, err
 	}
 
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-
-	go func() {
-		buf := make([]byte, 16)
-		for {
-			n, err2 := stdout.Read(buf)
-			if n > 0 {
-
-				input := string(buf[:n])
-				if len(input) != 0 {
-					input = input[1:]
-					input = input[:len(input)-1]
-					input = strings.TrimSpace(input)
-					if len(input) == 0 {
-						continue
-					}
-					percentage, err := strconv.ParseFloat(input, 64)
-					if err != nil {
-						report(err)
-						return
-					}
-					go y.Progress(percentage)
-				}
-			}
-			if err2 != nil {
-				break
-			}
-		}
-	}()
-
-	go func() {
-		buf := make([]byte, 16)
-		for {
-			n, err2 := stderr.Read(buf)
-			if n > 0 {
-				go y.ProgressError(string(buf[:n]))
-			}
-			if err2 != nil {
-				break
-			}
-		}
-	}()
-
-	if err := cmd.Wait(); err != nil {
-		return nil, err
-	}
-
-	elapsed := time.Since(start)
-	dlog.Log.Info("time for ytdlp", "duration", elapsed.Seconds())
-
-	open, err := os.Open("/tmp/audio/" + newUUID.String() + ".opus")
-	if err != nil {
-		return nil, err
-	}
-
-	return open, nil
+	return stream, nil
 }
 
 func Search(query string) (Data, error) {

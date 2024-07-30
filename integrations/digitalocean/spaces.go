@@ -1,6 +1,7 @@
 package digitalocean
 
 import (
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -35,7 +36,8 @@ func Download(filePath string) (*s3.GetObjectOutput, error) {
 
 	if err != nil {
 		if requestFailure, ok := err.(awserr.RequestFailure); ok && requestFailure.StatusCode() == http.StatusNotFound {
-			return nil, err
+			//return nil, err
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -43,6 +45,15 @@ func Download(filePath string) (*s3.GetObjectOutput, error) {
 }
 
 func Upload(opusFile, filePath string, tags map[string]*string) error {
+
+	stat, err := os.Stat(opusFile)
+	if err != nil {
+		return err
+	}
+	if stat.Size() == 0 {
+		return errors.New("file is empty")
+	}
+
 	open, err := os.Open(opusFile)
 	if err != nil {
 		return err
