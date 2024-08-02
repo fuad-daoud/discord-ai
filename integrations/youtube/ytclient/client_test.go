@@ -153,7 +153,7 @@ func TestGetVideo_MultiLanguage(t *testing.T) {
 func TestGetStream(t *testing.T) {
 	assert, require := assert.New(t), require.New(t)
 
-	expectedSize := 988479
+	expectedSize := 293620
 
 	// Create testclient to enforce re-using of routines
 	testClient := Client{

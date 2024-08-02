@@ -4,8 +4,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/snowflake/v2"
-	"github.com/fuad-daoud/discord-ai/db"
-	"github.com/fuad-daoud/discord-ai/db/cypher"
+	db2 "github.com/fuad-daoud/discord-ai/layers/db"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"strings"
 )
@@ -15,26 +14,26 @@ func dbThreadCreateHandler(event *events.ThreadCreate) {
 	if event.Thread.OwnerID != event.Client().ApplicationID() {
 		return
 	}
-	err := db.InTransaction(func(write db.Write) error {
-		write(cypher.MergeN("t", db.Thread{
-			TextChannel: db.TextChannel{
+	err := db2.Transaction(func(write db2.Write) error {
+		write(db2.MergeN("t", db2.Thread{
+			TextChannel: db2.TextChannel{
 				Id:          event.ThreadID.String(),
 				Name:        event.Thread.Name(),
 				CreatedDate: event.Thread.CreatedAt().String(),
 			},
 		}))
 
-		write(cypher.MatchN("t", db.Thread{TextChannel: db.TextChannel{Id: event.ThreadID.String()}}),
-			cypher.MatchN("m", db.Message{Id: event.ThreadID.String()}),
-			cypher.Merge("(m)-[:STARTED]->(t)-[:CONTAINS]->(m)"))
+		write(db2.MatchN("t", db2.Thread{TextChannel: db2.TextChannel{Id: event.ThreadID.String()}}),
+			db2.MatchN("m", db2.Message{Id: event.ThreadID.String()}),
+			db2.Merge("(m)-[:STARTED]->(t)-[:CONTAINS]->(m)"))
 
-		write(cypher.MatchN("mb", db.Member{Id: event.Thread.OwnerID.String()}),
-			cypher.MatchN("t", db.Thread{
-				TextChannel: db.TextChannel{
+		write(db2.MatchN("mb", db2.Member{Id: event.Thread.OwnerID.String()}),
+			db2.MatchN("t", db2.Thread{
+				TextChannel: db2.TextChannel{
 					Id: event.Thread.ID().String(),
 				},
 			}),
-			cypher.Merge("(mb)-[:CREATED]->(t)"),
+			db2.Merge("(mb)-[:CREATED]->(t)"),
 		)
 		return nil
 	})
@@ -51,15 +50,15 @@ func dbMessageUpdateHandler(event *events.GuildMessageUpdate) {
 		return
 	}
 
-	result, err := db.Query(cypher.MatchN("m", db.Message{Id: event.Message.ID.String()}), cypher.Return("m"))
+	result, err := db2.Query(db2.MatchN("m", db2.Message{Id: event.Message.ID.String()}), db2.Return("m"))
 	if err != nil {
 		dlog.Log.Error("Error in dbMessageUpdateHandler: ", err)
 		return
 	}
-	oldMessage, _ := cypher.ParseKey[db.Message]("m", result)
+	oldMessage, _ := db2.ParseKey[db2.Message]("m", result.Records)
 
-	err = db.InTransaction(func(write db.Write) error {
-		set, err := cypher.Set("m", db.Message{
+	err = db2.Transaction(func(write db2.Write) error {
+		set, err := db2.Set("m", db2.Message{
 			Id:          oldMessage.Id,
 			Text:        strings.ReplaceAll(event.Message.Content, "\"", "'"),
 			UpdatedDate: event.Message.CreatedAt.String(),
@@ -68,13 +67,9 @@ func dbMessageUpdateHandler(event *events.GuildMessageUpdate) {
 		if err != nil {
 			return err
 		}
-		_, err = write(cypher.MatchN("m", oldMessage),
+		return write(db2.MatchN("m", oldMessage),
 			set,
-			cypher.Return("m"))
-		if err != nil {
-			return err
-		}
-		return nil
+			db2.Return("m"))
 	})
 	if err != nil {
 		dlog.Log.Error("Error in dbMessageUpdateHandler: ", err)
@@ -91,16 +86,16 @@ func dbMessageCreateHandler(event *events.GuildMessageCreate) {
 	restClient := event.Client().Rest()
 	channel, _ := restClient.GetChannel(event.ChannelID)
 
-	message := db.Message{
+	message := db2.Message{
 		Id:          event.Message.ID.String(),
 		Text:        strings.ReplaceAll(event.Message.Content, "\"", "'"),
 		CreatedDate: event.Message.CreatedAt.String(),
 	}
 
-	member := db.Member{
+	member := db2.Member{
 		Id: event.Message.Author.ID.String(),
 	}
-	err := db.InTransaction(func(write db.Write) error {
+	err := db2.Transaction(func(write db2.Write) error {
 		if channel.Type() == discord.ChannelTypeGuildPublicThread {
 			threadMessageCreateHandler(write, channel, member, message)
 		} else {
@@ -115,40 +110,40 @@ func dbMessageCreateHandler(event *events.GuildMessageCreate) {
 	dlog.Log.Debug("Finished db messageCreateHandler")
 }
 
-func createMessageHandler(write db.Write, channel discord.Channel, guildId string, member db.Member, message db.Message) {
-	textChannel := db.TextChannel{
+func createMessageHandler(write db2.Write, channel discord.Channel, guildId string, member db2.Member, message db2.Message) {
+	textChannel := db2.TextChannel{
 		Id:   channel.ID().String(),
 		Name: channel.Name(),
 	}
-	dbGuild := db.Guild{Id: guildId}
-	write(cypher.MatchN("g", dbGuild),
-		cypher.MatchN("mb", member),
-		cypher.MergeN("c", textChannel),
-		cypher.CreateN("m", message),
-		cypher.Merge("(g)-[:HAS]->(c)"),
-		cypher.Merge("(c)-[:CONTAINS]->(m)-[:AUTHOR]->(mb)-[:CREATED]->(m)"))
+	dbGuild := db2.Guild{Id: guildId}
+	write(db2.MatchN("g", dbGuild),
+		db2.MatchN("mb", member),
+		db2.MergeN("c", textChannel),
+		db2.CreateN("m", message),
+		db2.Merge("(g)-[:HAS]->(c)"),
+		db2.Merge("(c)-[:CONTAINS]->(m)-[:AUTHOR]->(mb)-[:CREATED]->(m)"))
 }
 
-func threadMessageCreateHandler(write db.Write, channel discord.Channel, member db.Member, message db.Message) {
-	textChannel := db.TextChannel{
+func threadMessageCreateHandler(write db2.Write, channel discord.Channel, member db2.Member, message db2.Message) {
+	textChannel := db2.TextChannel{
 		Id: channel.(discord.GuildThread).ParentID().String(),
 	}
-	dbThread := db.Thread{
-		TextChannel: db.TextChannel{
+	dbThread := db2.Thread{
+		TextChannel: db2.TextChannel{
 			Id:   channel.(discord.GuildThread).ID().String(),
 			Name: channel.(discord.GuildThread).Name(),
 		},
 	}
-	write(cypher.MatchN("c", textChannel),
-		cypher.MatchN("mb", member),
-		cypher.MergeN("t", dbThread),
-		cypher.CreateN("m", message),
-		cypher.Merge("(c)-[:CHILD]->(t)-[:CONTAINS]->(m)-[:AUTHOR]->(mb)-[:CREATED]->(m)"),
-		cypher.Merge("(t)-[:PARENT]->(c)"))
+	write(db2.MatchN("c", textChannel),
+		db2.MatchN("mb", member),
+		db2.MergeN("t", dbThread),
+		db2.CreateN("m", message),
+		db2.Merge("(c)-[:CHILD]->(t)-[:CONTAINS]->(m)-[:AUTHOR]->(mb)-[:CREATED]->(m)"),
+		db2.Merge("(t)-[:PARENT]->(c)"))
 }
 
 func dbReadyHandler(event *events.Ready) {
-	err := db.InTransaction(func(write db.Write) error {
+	err := db2.Transaction(func(write db2.Write) error {
 		for _, guild := range event.Guilds {
 			dlog.Log.Debug("Merging guild", "ID", guild.ID)
 			guild, err := event.Client().Rest().GetGuild(guild.ID, false)
@@ -157,11 +152,11 @@ func dbReadyHandler(event *events.Ready) {
 				return err
 			}
 			dlog.Log.Debug("Found guild", "name", guild.Name)
-			guildNode := db.Guild{
+			guildNode := db2.Guild{
 				Id:   guild.ID.String(),
 				Name: guild.Name,
 			}
-			write(cypher.MergeN("g", guildNode))
+			write(db2.MergeN("g", guildNode))
 
 			dlog.Log.Debug("Merged guild", "name", guild.Name)
 
@@ -179,7 +174,7 @@ func dbReadyHandler(event *events.Ready) {
 	}
 }
 
-func addMembers(write db.Write, err error, event *events.Ready, guild *discord.RestGuild, guildNode db.Guild) error {
+func addMembers(write db2.Write, err error, event *events.Ready, guild *discord.RestGuild, guildNode db2.Guild) error {
 	members, err := event.Client().Rest().GetMembers(guild.ID, 1000, snowflake.MustParse("0"))
 	if err != nil {
 		dlog.Log.Error("Failed to get members", "guild", guild.ID, "error", err)
@@ -194,18 +189,18 @@ func addMembers(write db.Write, err error, event *events.Ready, guild *discord.R
 		} else {
 			avatar = *member.User.AvatarURL()
 		}
-		memberNode := db.Member{
+		memberNode := db2.Member{
 			Id:        member.User.ID.String(),
 			Name:      member.EffectiveName(),
 			AvatarUrl: avatar,
 		}
-		write(cypher.MergeN("mb", memberNode))
+		write(db2.MergeN("mb", memberNode))
 
 		dlog.Log.Debug("Merged members", "name", member.EffectiveName())
 
-		write(cypher.MatchN("g", guildNode),
-			cypher.MatchN("m", memberNode),
-			cypher.Merge("(g)-[:HAS]->(m)-[:MEMBER_OF]->(g)"),
+		write(db2.MatchN("g", guildNode),
+			db2.MatchN("m", memberNode),
+			db2.Merge("(g)-[:HAS]->(m)-[:MEMBER_OF]->(g)"),
 		)
 	}
 	return nil

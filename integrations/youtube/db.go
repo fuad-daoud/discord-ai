@@ -2,8 +2,7 @@ package youtube
 
 import (
 	"fmt"
-	"github.com/fuad-daoud/discord-ai/db"
-	"github.com/fuad-daoud/discord-ai/db/cypher"
+	db2 "github.com/fuad-daoud/discord-ai/layers/db"
 	"github.com/fuad-daoud/discord-ai/logger/dlog"
 	"sort"
 )
@@ -33,9 +32,9 @@ type DBQueueElement struct {
 }
 
 func (p DBPlayer) Save(guildId string) {
-	g := db.Guild{Id: guildId}
-	err := db.InTransaction(func(write db.Write) error {
-		_, err := write(cypher.MatchN("g", g), cypher.MergeN("p", p), cypher.Merge("(g)-[:HAS]->(p)"))
+	g := db2.Guild{Id: guildId}
+	err := db2.Transaction(func(write db2.Write) error {
+		err := write(db2.MatchN("g", g), db2.MergeN("p", p), db2.Merge("(g)-[:HAS]->(p)"))
 		if err != nil {
 			return err
 		}
@@ -47,12 +46,8 @@ func (p DBPlayer) Save(guildId string) {
 }
 
 func (p DBPlayer) addQueueElement(q DBQueueElement) {
-	err := db.InTransaction(func(write db.Write) error {
-		_, err := write(cypher.MatchN("p", p), cypher.CreateN("q", q), cypher.Create("(p)-[:QUEUE]->(q)"))
-		if err != nil {
-			return err
-		}
-		return nil
+	err := db2.Transaction(func(write db2.Write) error {
+		return write(db2.MatchN("p", p), db2.CreateN("q", q), db2.Create("(p)-[:QUEUE]->(q)"))
 	})
 	if err != nil {
 		dlog.Log.Error("error adding queue element: ", err)
@@ -60,12 +55,8 @@ func (p DBPlayer) addQueueElement(q DBQueueElement) {
 }
 
 func (q DBQueueElement) Delete() {
-	err := db.InTransaction(func(write db.Write) error {
-		_, err := write(cypher.Match(fmt.Sprintf("(q:DBQueueElement {UUID: \"%s\"})", q.UUID)), "DETACH", cypher.Delete("q"))
-		if err != nil {
-			return err
-		}
-		return nil
+	err := db2.Transaction(func(write db2.Write) error {
+		return write(db2.Match(fmt.Sprintf("(q:DBQueueElement {UUID: \"%s\"})", q.UUID)), "DETACH", db2.Delete("q"))
 	})
 	if err != nil {
 		dlog.Log.Error("error deleting queue element: ", err)
@@ -76,12 +67,13 @@ func (q DBQueueElement) GoDelete() {
 }
 
 func GetQueue(p DBPlayer) Queue {
-	result, err := db.Query(cypher.MatchN("p", p), "-[:QUEUE]->", "(q)", cypher.Return("q"))
+	result, err := db2.Query(db2.MatchN("p", p), "-[:QUEUE]->", "(q)", db2.Return("q"))
 	if err != nil {
 		dlog.Log.Error("error getting queue element: ", err)
+		//TODO: remove this panic
 		panic("error getting queue element")
 	}
-	all, ok := cypher.ParseAll[DBQueueElement]("q", result)
+	all, ok := db2.ParseAll[DBQueueElement]("q", result.Records)
 	if !ok {
 		return Queue{}
 	}

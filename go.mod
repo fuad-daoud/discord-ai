@@ -14,9 +14,9 @@ require (
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/neo4j/neo4j-go-driver/v5 v5.20.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/slog-multi v1.1.0
 	github.com/stretchr/testify v1.9.0
-	github.com/wader/goutubedl v0.0.0-20240709161310-0986214517b1
 	golang.org/x/net v0.22.0
 	layeh.com/gopus v0.0.0-20210501142526-1ee02d434e32
 )

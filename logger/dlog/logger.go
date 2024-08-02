@@ -1,6 +1,7 @@
 package dlog
 
 import (
+	"github.com/robfig/cron/v3"
 	slogmulti "github.com/samber/slog-multi"
 	"log/slog"
 	"os"
@@ -11,18 +12,20 @@ var multiLogger *slog.Logger
 var archiver = &Archiver{}
 
 func init() {
-	//slog.SetLogLoggerLevel(slog.LevelDebug)
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	setup()
 	multiLogger = createLogger()
 
-	//c := cron.New()
-	//entryID, err := c.AddFunc(os.Getenv("ARCHIVE_CRON"), archiver.process)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//c.Start()
+	c := cron.New()
+	//cron := os.Getenv("ARCHIVE_CRON")
+	cron := "0 0 * * *"
+	entryID, err := c.AddFunc(cron, archiver.process)
+	if err != nil {
+		panic(err)
+	}
+	c.Start()
 	Log = multiLogger
-	//Log.Info("Created cron ", "entryID", entryID)
+	Log.Info("Created cron ", "entryID", entryID)
 }
 
 func setup() {
